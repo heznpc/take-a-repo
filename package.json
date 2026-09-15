@@ -33,7 +33,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/starter-series/take-a-repo.git"
+    "url": "git+https://github.com/heznpc/shotkit.git"
   },
   "keywords": [
     "screen-recording",
