@@ -1,11 +1,11 @@
 /*
- * shotkit — demo video post-processing (mp4 conversion + trim + framing).
+ * take-a-repo — demo video post-processing (mp4 conversion + trim + framing).
  *
  * X/Twitter and most SNS uploaders want H.264 MP4, not the vp8 webm that
  * Playwright records. Conversion needs a REAL ffmpeg: Playwright's bundled
  * ffmpeg is a minimal vp8-only build (no libx264 — verified empirically), so
  * we resolve, in order:
- *   1. SHOTKIT_FFMPEG (explicit binary path)
+ *   1. TAKE_A_REPO_FFMPEG (explicit binary path)
  *   2. `ffmpeg` on PATH (GitHub ubuntu runners ship one; macOS: `brew install ffmpeg`)
  * If mp4/trim/crop/zoom/thumbnail was requested and no ffmpeg is found we fail
  * loudly with the install hint — a requested output is never silently skipped.
@@ -18,13 +18,13 @@ const { execFileSync, spawnSync } = require('child_process');
 const INSTALL_HINT =
   'no ffmpeg found — install one (macOS: `brew install ffmpeg`; Debian/Ubuntu: ' +
   '`apt-get install -y ffmpeg`; GitHub ubuntu runners already have it) or set ' +
-  "SHOTKIT_FFMPEG to a binary. Playwright's bundled ffmpeg cannot encode H.264.";
+  "TAKE_A_REPO_FFMPEG to a binary. Playwright's bundled ffmpeg cannot encode H.264.";
 
 // Bound each ffmpeg invocation so a wedged encoder (bad input, odd codec path,
 // a binary that hangs on stdin) can't block the whole capture run forever.
-// Override for legitimately long encodes via SHOTKIT_FFMPEG_TIMEOUT_MS.
+// Override for legitimately long encodes via TAKE_A_REPO_FFMPEG_TIMEOUT_MS.
 function ffmpegTimeoutMs(env = process.env) {
-  const raw = Number(env.SHOTKIT_FFMPEG_TIMEOUT_MS);
+  const raw = Number(env.TAKE_A_REPO_FFMPEG_TIMEOUT_MS);
   return Number.isFinite(raw) && raw > 0 ? raw : 120_000;
 }
 
@@ -42,8 +42,8 @@ function runFfmpeg(bin, args, timeoutMs) {
   } catch (err) {
     if (err && (err.killed || err.code === 'ETIMEDOUT')) {
       throw new Error(
-        `shotkit: ffmpeg timed out after ${Math.round(timeoutMs / 1000)}s — the encoder may be ` +
-          'wedged. Raise SHOTKIT_FFMPEG_TIMEOUT_MS for legitimately long encodes.',
+        `take-a-repo: ffmpeg timed out after ${Math.round(timeoutMs / 1000)}s — the encoder may be ` +
+          'wedged. Raise TAKE_A_REPO_FFMPEG_TIMEOUT_MS for legitimately long encodes.',
         { cause: err },
       );
     }
@@ -56,7 +56,7 @@ function runFfmpeg(bin, args, timeoutMs) {
  * @param {NodeJS.ProcessEnv} [env]
  */
 function findFfmpeg(env = process.env) {
-  for (const bin of [env.SHOTKIT_FFMPEG, 'ffmpeg']) {
+  for (const bin of [env.TAKE_A_REPO_FFMPEG, 'ffmpeg']) {
     if (!bin) continue;
     try {
       // `-version` returns near-instantly; a small timeout guards against a
@@ -76,10 +76,10 @@ function findFfmpeg(env = process.env) {
 }
 
 function findFfprobe(env = process.env) {
-  const sibling = env.SHOTKIT_FFMPEG
-    ? path.join(path.dirname(env.SHOTKIT_FFMPEG), 'ffprobe')
+  const sibling = env.TAKE_A_REPO_FFMPEG
+    ? path.join(path.dirname(env.TAKE_A_REPO_FFMPEG), 'ffprobe')
     : null;
-  for (const bin of [env.SHOTKIT_FFPROBE, sibling, 'ffprobe']) {
+  for (const bin of [env.TAKE_A_REPO_FFPROBE, sibling, 'ffprobe']) {
     if (!bin) continue;
     try {
       const result = spawnSync(bin, ['-version'], {
@@ -153,7 +153,7 @@ function decodeVideo(filePath, env = process.env) {
 function probeVideo(filePath, env = process.env) {
   const bin = findFfprobe(env);
   if (!bin) {
-    return { ok: false, error: 'no ffprobe found; install ffmpeg or set SHOTKIT_FFPROBE' };
+    return { ok: false, error: 'no ffprobe found; install ffmpeg or set TAKE_A_REPO_FFPROBE' };
   }
   const result = spawnSync(bin, [
     '-v', 'error',
@@ -193,7 +193,7 @@ function probeVideo(filePath, env = process.env) {
  */
 function buildFfmpegArgs({ input, output, trim, crf = 23, crop, zoom, copy = false }) {
   if (!copy && (!Number.isFinite(Number(crf)) || Number(crf) < 0 || Number(crf) > 63)) {
-    throw new Error('shotkit: demo.mp4.crf must be a number between 0 and 63');
+    throw new Error('take-a-repo: demo.mp4.crf must be a number between 0 and 63');
   }
   const args = ['-hide_banner', '-loglevel', 'error', '-y'];
   // -ss before -i = fast keyframe seek; with re-encode it is frame-accurate.
@@ -222,19 +222,19 @@ function buildVideoFilter({ crop, zoom } = {}) {
   const filters = [];
   if (crop) {
     for (const key of ['x', 'y', 'width', 'height']) {
-      if (!Number.isFinite(crop[key])) throw new Error(`shotkit: demo.crop.${key} must be a finite number`);
+      if (!Number.isFinite(crop[key])) throw new Error(`take-a-repo: demo.crop.${key} must be a finite number`);
     }
     if (crop.width <= 0 || crop.height <= 0) {
-      throw new Error('shotkit: demo.crop.width and demo.crop.height must be greater than 0');
+      throw new Error('take-a-repo: demo.crop.width and demo.crop.height must be greater than 0');
     }
     filters.push(`crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}`);
   }
   if (zoom) {
     const scale = typeof zoom === 'number' ? zoom : zoom.scale;
-    if (!Number.isFinite(scale) || scale <= 1) throw new Error('shotkit: demo.zoom scale must be > 1');
+    if (!Number.isFinite(scale) || scale <= 1) throw new Error('take-a-repo: demo.zoom scale must be > 1');
     for (const key of ['x', 'y']) {
       if (typeof zoom === 'object' && typeof zoom[key] === 'number' && !Number.isFinite(zoom[key])) {
-        throw new Error(`shotkit: demo.zoom.${key} must be a finite number`);
+        throw new Error(`take-a-repo: demo.zoom.${key} must be a finite number`);
       }
     }
     const x = typeof zoom === 'object' && zoom.x != null ? zoom.x : `(iw-iw/${scale})/2`;
@@ -347,6 +347,7 @@ function postProcessDemo({ webmPath, mp4, trim, crop, zoom, thumbnail, log, env 
 }
 
 module.exports = {
+  ffmpegTimeoutMs,
   findFfmpeg,
   findFfprobe,
   decodeVideo,

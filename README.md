@@ -1,11 +1,12 @@
 <div align="center">
 
-# Shotkit
+# take-a-repo
 
-**Your agent built it. shotkit shows it running.**
+**Your agent built it. take-a-repo shows it running.**
 
-One command records a captioned demo clip of any web app — video proof, from a
-clean checkout, that the thing actually renders and works.
+Collect real execution evidence from browser, native, CLI and API products.
+Connect claims to observed checks, create review assets, and approve exact files.
+Browser recording is one producer, not the product boundary.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Node ≥ 22](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](.nvmrc)
@@ -16,24 +17,32 @@ clean checkout, that the thing actually renders and works.
 
 ---
 
-![shotkit demo — a captioned proof clip recorded from one command](docs/media/quick-demo.gif)
+![take-a-repo demo — a captioned proof clip recorded from one command](docs/media/quick-demo.gif)
 
 ```bash
-npm i -D demoshot && npx playwright install chromium   # one-time
-npx demoshot demo http://localhost:3000  # a dev server
-npx demoshot demo ./dist                 # a static build dir
-npx demoshot demo page.html              # a single file
+npm ci                                      # in this source checkout
+node bin/take-a-repo.js examples/evidence --json   # real CLI + API, no browser
+node bin/take-a-repo.js review examples/evidence/product-evidence --json
 ```
 
-> The npm package is **`demoshot`** (npm blocks the name `shotkit` as too
-> similar to the existing `shot-kit`). Installing it provides both the
-> `demoshot` and `shotkit` commands.
+> The package and command are both **`take-a-repo`**. The npm name was **not
+> published** at the 2026-09-07 check. Use this checkout or a local tarball below.
 
-That's the whole setup. In about half a minute you get
-`shotkit-demo/demo.webm`, plus `demo.mp4` and a thumbnail when ffmpeg is
+The [product evidence contract](docs/evidence.md) covers command producers,
+native media, feature checks, isolated runs, channel rendering and final review.
+The runnable AppKit example is in `examples/evidence/native` (macOS CLI tools).
+
+For a quick **browser appearance clip**, install Chromium and run
+`node bin/take-a-repo.js demo http://localhost:3000`. This path is capture-only:
+rendering and scrolling a page do not establish that its product features work,
+and quick clips have no publication approval. Use a configured evidence or
+browser launch workflow for final review.
+
+The quick browser path writes
+`take-a-repo-demo/demo.webm`, plus `demo.mp4` and a thumbnail when ffmpeg is
 installed. **No config file** — captions come from the page's own title and
 headings, and the clip walks the page with a paced scroll. Coding agents get
-the same contract as everywhere else in shotkit: `--json` prints exactly one
+the same contract as everywhere else in take-a-repo: `--json` prints exactly one
 JSON object on stdout, and exit codes are `0 ok · 1 failure · 2 usage`.
 
 **And it grows.** The same engine is a full launch-asset pipeline for browser
@@ -44,21 +53,26 @@ below this line.
 
 ---
 
-> **Shotkit** is an independent launch asset tool by [Heznpc](https://github.com/heznpc). Published on npm as [`demoshot`](https://www.npmjs.com/package/demoshot) because the `shotkit` package name is unavailable; the canonical CLI is `shotkit` (`demoshot` remains an alias).
+> **Part of [Starter Series](https://github.com/starter-series)** — reusable launch tooling. The project, package and CLI share the `take-a-repo` name; npm publication is a separate release step.
 
 ## Status & Scope
 
+- **Cross-product evidence** — `config.evidence` executes repo-owned browser/native/CLI/API producers, measures typed evidence, links claims to checks, creates isolated candidates and proof pages/channel videos, and rehashes the entire file set at final review. See [the contract and runnable consumers](docs/evidence.md). Imported checks stay unverified. Platform automation drivers remain external producers.
 - **Currently implemented** — An autonomous launch asset **pipeline** whose Playwright engine builds and drives the *shipped* extension, expands one story into `cws-youtube`, `x`, and `youtube-shorts` variants, applies target viewport/H.264/trim/caption/thumbnail defaults, probes final MP4 metadata with ffprobe, fully decodes the delivered video with ffmpeg, checks poster dimensions and pixels for blank-frame failures, and emits a technical `machineStatus` of `publish-ready`, `needs-fix`, or `blocked`. A separate digest-bound approval gate returns `awaiting-approval`, `changes-requested`, or `approved` as the delivery status. The schema-backed pack carries source evidence, captions, run provenance, integrity, user decisions, and agent-owned retry actions. The same engine is exposed through the CLI, `capture()`, skill, and AGENTS.md run-block.
 - **Story renderer** — Demo configs can use one `demo` or several `demos: []` entries, timed static or Shorts-style focus captions, pointer-highlighted clicks, recordable native-select changes, paced cursor movement, static zoom/crop framing, thumbnail frames, storyboard lint, and a small `demo` helper (`caption`, `step`, `wait`, `click`, `select`) so an agent can turn a feature checklist into 20-40 second before → action → result stories without pulling in a general video editor.
-- **Design intent** — *One engine, many surfaces — matched to the tool's nature.* shotkit is a heavy, file-producing build tool, so its surfaces are CLI (+`--json`), skill, and CI — not MCP (see Non-goals). Captures are **deterministic** (login-free fixtures, frozen data) and the run **doubles as a real-bundle smoke test** — a screenshot only appears if that feature rendered from the shipped code. **Trademark-safe** by construction: a disclaimer band is composited onto every shot.
-- **Non-goals** — An **MCP server** inside shotkit (agents with a shell get a better contract from `--json` + the skill). Removing the per-repo **story/action config** (which product state proves the claim is irreducible intent). A general-purpose timeline editor or hosted demo platform. Repeatable channel work is automated; manual editors are fallback-only and disabled unless explicitly requested.
+- **Design intent** — *One engine, many surfaces — matched to the tool's nature.* take-a-repo is a heavy, file-producing build tool, so its surfaces are CLI (+`--json`), skill, and CI — not MCP (see Non-goals). Captures are **deterministic** (login-free fixtures, frozen data) and the run **doubles as a real-bundle smoke test** — a screenshot only appears if that feature rendered from the shipped code. **Trademark-safe** by construction: a disclaimer band is composited onto every shot.
+- **Non-goals** — An **MCP server** inside take-a-repo (agents with a shell get a better contract from `--json` + the skill). Removing the per-repo **story/action config** (which product state proves the claim is irreducible intent). A general-purpose timeline editor or hosted demo platform. Repeatable channel work is automated; manual editors are fallback-only and disabled unless explicitly requested.
 - **Redacted** — none. Ships no private data, credentials, or third-party identifiers.
 
 ## Install
 
 ```bash
-npm i -D demoshot
-npx playwright install chromium    # one-time: the browser shotkit drives
+npm ci
+npm pack                          # produces take-a-repo-1.5.0.tgz
+# In a consumer checkout, install that exact local tarball:
+npm i -D /absolute/path/to/take-a-repo-1.5.0.tgz
+# Only browser producers need this:
+npx playwright install chromium
 ```
 
 Or work from this repository:
@@ -67,67 +81,82 @@ Or work from this repository:
 npm ci
 npm run lint
 npm test
-node bin/shotkit.js --help
+node bin/take-a-repo.js --help
 ```
 
-Or as a **Claude Code plugin** (bundles the capture skill):
+The checkout bundles `skills/launch-proof`, `skills/capture`, and `skills/demo`.
+Load them through your host's Agent Skills mechanism; the external Starter
+Series marketplace must be updated before its renamed entry can be relied on.
+See [discovery and the consumer completion rule](docs/evidence.md#agent-discovery-and-installation).
 
-```text
-/plugin marketplace add starter-series/create-starter
-/plugin install shotkit@starter-series
-```
-
-Zero-install in any repo that has a config:
+After local installation, in a repo with a config:
 
 ```bash
-npx demoshot
+npx --no-install take-a-repo --json
 ```
 
-> shotkit launches the **full Chromium** (`channel: 'chromium'`) — never the default headless-shell, which strips the extension subsystem. **Headless works** (`HEADED=0`; verified on macOS and Linux CI, video included) and is the CI default in the starter's capture workflow; the local default stays headed for easy debugging. Headed-under-xvfb proved unreliable on CI runners (the 8-bit default breaks Chromium's screenshot capture, and a 24-bit screen still failed silently) — run headless in CI.
+> take-a-repo launches the **full Chromium** (`channel: 'chromium'`) — never the default headless-shell, which strips the extension subsystem. **Headless works** (`TAKE_A_REPO_HEADED=0`; verified on macOS and Linux CI, video included) and is the CI default in the starter's capture workflow; the local default stays headed for easy debugging. Headed-under-xvfb proved unreliable on CI runners (the 8-bit default breaks Chromium's screenshot capture, and a 24-bit screen still failed silently) — run headless in CI.
 
 ## Usage
 
 The zero-config path needs no file at all:
 
 ```bash
-shotkit demo http://localhost:3000   # captioned proof clip of any web app
-shotkit demo ./dist --duration 30    # static dir, longer clip
-shotkit demo --help                  # all options
+take-a-repo demo http://localhost:3000   # captioned proof clip of any web app
+take-a-repo demo ./dist --duration 30    # static dir, longer clip
+take-a-repo demo --help                  # all options
 ```
+
+For “한국어로 소개 영상 만들어”, the `skills/demo` agent workflow scouts the
+page, authors Korean captions, then records them. The CLI does not contain an
+LLM or a voice synthesizer:
+
+```bash
+node bin/take-a-repo.js demo ./dist --lang ko --json
+# Agent reads the returned brief and writes intro-ko.json; no video yet.
+node bin/take-a-repo.js demo ./dist --lang ko --script intro-ko.json --json
+```
+
+Scripts bind to the observed page content and are checked for language, anchor
+order and reading time. A changed page requires a fresh brief. Use `--font`
+with a project-local font for deterministic typography; otherwise the JSON
+reports system-font uncertainty. Localized quick scripts currently produce
+plain clips, not `--for` variants; channel publishing uses the full pipeline.
+Existing no-language quick recording remains unchanged.
 
 Need a file you can actually upload? Name the channel and it comes out sized,
 trimmed, captioned, and **verified against that channel's published limits**:
 
 ```bash
-shotkit demo http://localhost:3000 --for x                # 1280×720, ≤140s
-shotkit demo http://localhost:3000 --for youtube-shorts   # 720×1280, focus captions
-shotkit demo http://localhost:3000 --for x,cws-youtube    # both, one run
+take-a-repo demo http://localhost:3000 --for x                # 1280×720, ≤140s
+take-a-repo demo http://localhost:3000 --for youtube-shorts   # 720×1280, focus captions
+take-a-repo demo http://localhost:3000 --for x,cws-youtube    # both, one run
 ```
 
 Each channel adds `demo-<channel>.mp4` plus a poster frame. The run fails if a
 delivered file misses its channel's dimensions, codec, or duration cap, so
 "ready to upload" is measured rather than assumed. `--for` needs ffmpeg.
 
-For the full pipeline, add a `shotkit.config.js` (the per-repo capture
+For the full pipeline, add a `take-a-repo.config.js` (the per-repo capture
 contract), then:
 
 ```bash
-shotkit                         # produce everything into outDir
-shotkit --scene 01-feature      # just one scene/promoTile/demo/demos entry, "description", or "privacy"
-shotkit --target x              # render/retry only the configured X variants
-shotkit --attempt 2 --json      # next autonomous fix attempt
-shotkit --campaign              # choose a recipe, produce, and review final media
-shotkit --calibrate             # open the local composition calibrator
-shotkit --no-video              # skip the screencast (faster/CI)
-shotkit --no-build              # use an already-built bundle
-shotkit ../my-extension --json  # run against another checkout; JSON result on stdout
+take-a-repo                         # produce everything into outDir
+take-a-repo --scene 01-feature      # just one scene/promoTile/demo/demos entry, "description", or "privacy"
+take-a-repo --target x              # render/retry only the configured X variants
+take-a-repo --attempt 2 --json      # next autonomous fix attempt
+take-a-repo --campaign              # choose a recipe, produce, and review final media
+take-a-repo --calibrate             # open the local composition calibrator
+take-a-repo --no-video              # skip the screencast (faster/CI)
+take-a-repo --no-build              # use an already-built bundle
+take-a-repo ../my-extension --json  # run against another checkout; JSON result on stdout
 ```
 
-Outputs land in `outDir` (default `store-assets/`): `<scene>.png`, `<promoTile>.png`, `<demo>.webm`, optional `<demo>.mp4`, optional `<demo>-thumbnail.png`, `description.md`, optional `privacy-disclosure.md`, and, by default, `storyboard.json`, `captions.json`, `shotkit-manifest.json`, plus four schemas under `schemas/` (`handoff: false` disables the handoff pack). The first review decision creates `shotkit-approval.json`.
+Outputs land in `outDir` (default `store-assets/`): `<scene>.png`, `<promoTile>.png`, `<demo>.webm`, optional `<demo>.mp4`, optional `<demo>-thumbnail.png`, `description.md`, optional `privacy-disclosure.md`, and, by default, `storyboard.json`, `captions.json`, `take-a-repo-manifest.json`, plus four schemas under `schemas/` (`handoff: false` disables the handoff pack). The first review decision creates `take-a-repo-approval.json`.
 
 ### Campaign Dashboard
 
-Run `shotkit --campaign` to open the local campaign dashboard. A channel-targeted
+Run `take-a-repo --campaign` to open the local campaign dashboard. A channel-targeted
 story becomes a Campaign Recipe automatically; the recipe owns its configured
 channel profiles, so the user selects one story rather than assembling outputs
 one by one. The dashboard starts production, follows agent-owned capture and QA,
@@ -151,9 +180,9 @@ module.exports = {
 };
 ```
 
-The existing Calibrator remains available through `shotkit --calibrate` and the
+The existing Calibrator remains available through `take-a-repo --calibrate` and the
 dashboard's Advanced control. Campaign selection is stored separately in
-`shotkit-campaign.json`; it does not rewrite config source or replace the
+`take-a-repo-campaign.json`; it does not rewrite config source or replace the
 manifest, calibration, or approval contracts. Projects without
 `config.calibration` can still use the Campaign Dashboard; Advanced is exposed
 only when calibration is configured.
@@ -173,7 +202,7 @@ a small set of authored layout presets and a tracked calibration document:
 ```js
 module.exports = {
   calibration: {
-    from: 'shotkit.calibration.json',
+    from: 'take-a-repo.calibration.json',
     layouts: ['focus-column', 'compact-column'],
   },
   demos: [{
@@ -186,10 +215,10 @@ module.exports = {
 };
 ```
 
-Run `shotkit --calibrate` to open the local-only dashboard. It previews the
+Run `take-a-repo --calibrate` to open the local-only dashboard. It previews the
 actual captured MP4 and intentionally limits adjustment to the declared layout
 preset, 1.00-1.20 framing, caption lane/appearance, and at most three protected
-UI regions. Save writes `shotkit.calibration.json`; it never rewrites the
+UI regions. Save writes `take-a-repo.calibration.json`; it never rewrites the
 CommonJS config. Recapture replays the real story and current profile, and only
 a matching `publish-ready` result marks that profile verified. Changed or stale
 profiles remain `needs-fix`.
@@ -210,11 +239,11 @@ not the repair mechanics.
 - `storyboard.json` — demo names, audience, viewport, trim/framing hints, beats,
   structured storyboard lint warnings, and suggested next tool.
 - `captions.json` — portable caption timings and text per demo.
-- `shotkit-manifest.json` — the entrypoint: asset inventory and integrity,
+- `take-a-repo-manifest.json` — the entrypoint: asset inventory and integrity,
   run/freshness metadata, bundled schema paths, and
   `handoff.automation` with target checks and agent-owned retry actions, plus
   `handoff.approval` with the final publication gate.
-- `shotkit-approval.json` — created after the first decision; binds Approve or
+- `take-a-repo-approval.json` — created after the first decision; binds Approve or
   Request changes to the exact media SHA-256 and calibration profile hash.
 - `schemas/*.schema.json` — local validation contracts, copied into every pack
   so a downstream agent does not need the installed npm package.
@@ -277,7 +306,7 @@ loop; Approve unlocks only the exact reviewed digest. Manual editor hints appear
 only with `automation: { manualFallback: true }`.
 
 Localized campaign variants can opt into deterministic, measured typography.
-Declare the authored locale and project-local font files; Shotkit embeds those
+Declare the authored locale and project-local font files; take-a-repo embeds those
 fonts into the recorded page, verifies glyph coverage before launch, waits for
 the browser font load, and shrinks each rendered caption only as far as the
 declared minimum size and line count allow:
@@ -296,7 +325,7 @@ captionOptions: {
     fit: 'shrink',
     fonts: [{
       family: 'Campaign Sans',
-      from: '.shotkit/fonts/campaign-sans.woff2',
+      from: '.take-a-repo/fonts/campaign-sans.woff2',
       weight: '100 900',
     }],
   },
@@ -329,7 +358,7 @@ the `x` target applies 1280×720 H.264 automatically. The lower-level
 ### Demo → mp4 / trim (SNS)
 
 SNS uploaders (X, etc.) want H.264 mp4, not webm. Add `--mp4` (or configure it) and
-shotkit post-processes the recording — silent H.264, `yuv420p`, `+faststart`:
+take-a-repo post-processes the recording — silent H.264, `yuv420p`, `+faststart`:
 
 ```js
 demo: {
@@ -345,7 +374,7 @@ demo: {
 
 `trim` without `mp4` stream-copy-trims the webm in place. Requires a real
 ffmpeg (`brew install ffmpeg` / `apt-get install -y ffmpeg`; GitHub ubuntu
-runners have one; override with `SHOTKIT_FFMPEG`) — Playwright's bundled
+runners have one; override with `TAKE_A_REPO_FFMPEG`) — Playwright's bundled
 ffmpeg is vp8-only and can't encode H.264. If mp4/trim/crop/zoom/thumbnail is
 requested and no ffmpeg is found, the run fails with the install hint rather
 than skipping.
@@ -357,7 +386,7 @@ position is lower-left, with a translucent background, large text, safe padding,
 and no collision with the top-left disclaimer badge.
 
 Timed captions can use the built-in short-form focus treatment without speech
-transcription. Shotkit derives a deterministic synthetic word schedule from the authored
+transcription. take-a-repo derives a deterministic synthetic word schedule from the authored
 story, so silent product demos do not need Whisper, Python, or a second render
 engine. `youtube-shorts` enables this automatically; custom and target-specific
 captures can opt in or tune it directly:
@@ -393,7 +422,7 @@ pointer and click ripple in the recording. Tune pacing with
 Playwright Locator or `{ x, y }` point also works when selectors are awkward.
 
 Native `<select>` popups are OS/browser UI and do not appear in Playwright's
-page screencast. Use `demo.select()` so shotkit mirrors the element's real DOM
+page screencast. Use `demo.select()` so take-a-repo mirrors the element's real DOM
 options inside the recorded page, shows the pointer, and then applies the real
 selection:
 
@@ -440,7 +469,7 @@ demo: {
 
 Focus sequencing applies to timed `captions[]`. Direct `demo.caption()` and
 `demo.step()` calls remain immediate full-phrase callouts so their existing
-control-flow timing does not change. Shotkit marks its caption and select
+control-flow timing does not change. take-a-repo marks its caption and select
 overlays as non-translatable so a product localization feature cannot rewrite
 authored campaign copy.
 
@@ -457,11 +486,11 @@ demo: {
 
 Storyboard lint runs by default and logs warnings instead of failing the run.
 The same warnings are written to `storyboard.json` with `code`, `severity`,
-`message`, and `fix`, so an agent can revise `shotkit.config.js` on the next
+`message`, and `fix`, so an agent can revise `take-a-repo.config.js` on the next
 pass. Current checks cover missing mp4, first caption after 3 seconds, odd video
 dimensions, long captions, missing safety/restore beat, unsupported/offscreen
 caption placement, crop/zoom edge risk, and clips outside the 20-40 second
-target. During the real recording, Shotkit also measures every scheduled
+target. During the real recording, take-a-repo also measures every scheduled
 caption frame's bounding box, overflow, line count, computed outline stroke,
 presence, timing drift, configured font load, fitted size, and line balance.
 A mismatch becomes structured lint and prevents
@@ -504,17 +533,17 @@ move cursor/click/typing actions slowly, and use mp4 for X.
 
 ### Agent contract (`--json`)
 
-`shotkit [path] --json` prints **exactly one JSON object** to stdout (progress
+`take-a-repo [path] --json` prints **exactly one JSON object** to stdout (progress
 logs move to stderr):
 
 ```json
-{ "ok": true, "status": "awaiting-approval", "machineStatus": "publish-ready", "outDir": "/abs/store-assets", "manifest": "/abs/store-assets/shotkit-manifest.json", "produced": ["/abs/store-assets/skillbridge-x.mp4"] }
+{ "ok": true, "status": "awaiting-approval", "machineStatus": "publish-ready", "outDir": "/abs/store-assets", "manifest": "/abs/store-assets/take-a-repo-manifest.json", "produced": ["/abs/store-assets/skillbridge-x.mp4"] }
 ```
 
 Exit codes: `0` ok · `1` runtime failure · `2` usage / no config found. Failure
 payloads also use the single stdout JSON object (`{"ok":false,"error":…}`).
 `ok:true` means execution completed. `machineStatus:publish-ready` means every
-requested target passed shotkit's story lint, H.264/yuv420p, actual
+requested target passed take-a-repo's story lint, H.264/yuv420p, actual
 dimensions, actual duration, thumbnail, nonblank-frame, integrity, and target
 profile checks. Delivery `status` remains `awaiting-approval` until the user
 reviews the media. It becomes `approved` only for that exact digest; a recapture
@@ -525,10 +554,10 @@ Drop-in agent wiring: the run-block in
 the [`skills/capture/`](skills/capture/SKILL.md) skill (Agent Skills format —
 copy the folder into any compatible tool's skills directory).
 
-## Config contract (`shotkit.config.js`)
+## Config contract (`take-a-repo.config.js`)
 
 ```js
-const { serveDirectory, stageExtension, patchManifestForLocalhost } = require('shotkit');
+const { serveDirectory, stageExtension, patchManifestForLocalhost } = require('take-a-repo');
 
 module.exports = {
   build: 'npm run build',                 // run first → real-bundle smoke test (optional)
@@ -627,7 +656,7 @@ permission tables. It is intentionally not a privacy policy generator.
 
 ## Public API
 
-`require('shotkit')` →
+`require('take-a-repo')` →
 `capture(config, opts)` · `serveDirectory` · `stageExtension` · `patchManifestForLocalhost` ·
 `launchWithExtension` · `closeContext` · `compositeCaption` · `renderPromoTile` ·
 `extractListing` · `extractProductManifest` · `renderDescriptionDoc` ·
@@ -642,17 +671,17 @@ permission tables. It is intentionally not a privacy policy generator.
 
 | Surface | Status | For |
 |---|---|---|
-| CLI (`shotkit`) with `--json` + `path` | ✅ now from source; `npx` after npm publication | humans / CI / **shell-having agents** |
+| CLI (`take-a-repo`) with `--json` + `path` | ✅ now from source; `npx` after npm publication | humans / CI / **shell-having agents** |
 | Programmatic `capture()` | ✅ now | embedding |
 | Claude Code skill ([`skills/capture/`](skills/capture/SKILL.md)) | ✅ now | Claude Code (portable to Codex/Cursor/Gemini via the Agent Skills format) |
 | `AGENTS.md` run-block | ✅ now | every agent that reads AGENTS.md |
-| npm package (`shotkit`) | release target | `npx` zero-install after publish |
+| npm package (`take-a-repo`) | release target | `npx` zero-install after publish |
 | Autonomous target rendering (`demo.targets`, CWS/YouTube, X, Shorts, ffprobe, pixel QA, retry actions) | ✅ now | publish-ready channel variants |
 | Capture-in-CI GitHub Action | ✅ now — ships in [`browser-extension-starter`](https://github.com/starter-series/browser-extension-starter)'s `capture.yml` (headless) | zero-local-browser runs + CI smoke test |
-| `starter-series` marketplace entry (`/plugin install shotkit@starter-series`) | ✅ now | discovery |
+| `starter-series` marketplace entry (`/plugin install take-a-repo@starter-series`) | ✅ now | discovery |
 | General timeline/audio editing | non-goal | explicit `automation.manualFallback:true` only |
 
-An MCP stdio tool was considered and **dropped** — see Non-goals: shotkit is a heavy, file-producing build tool, so a `--json` CLI + skill serves agents better than an MCP server's per-session context cost.
+An MCP stdio tool was considered and **dropped** — see Non-goals: take-a-repo is a heavy, file-producing build tool, so a `--json` CLI + skill serves agents better than an MCP server's per-session context cost.
 
 **Generalization rule** (for the next capability in the series): *one npm package (engine + thin CLI), one `*.config.js` contract for irreducible per-repo intent, agent surfaces matched to the tool's nature (fast/structured: an MCP tool taking a `path`; heavy/build-time: a `--json` CLI + skill + AGENTS.md run-block), one marketplace entry. The engine never reads project specifics except through the config contract.*
 

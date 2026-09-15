@@ -1,5 +1,5 @@
 /*
- * shotkit — demo story helpers.
+ * take-a-repo — demo story helpers.
  *
  * Demo videos are recorded from the real page, so captions are rendered as a
  * lightweight DOM overlay during Playwright recording. The helper object passed
@@ -21,34 +21,34 @@ function normalizeDemoConfigs(config = {}) {
   const demos = [];
   if (config.demo) demos.push(config.demo);
   if (config.demos != null) {
-    if (!Array.isArray(config.demos)) throw new Error('shotkit: config.demos must be an array');
+    if (!Array.isArray(config.demos)) throw new Error('take-a-repo: config.demos must be an array');
     demos.push(...config.demos);
   }
 
   const validated = demos.map((demo, index) => {
     if (!demo || typeof demo !== 'object') {
-      throw new Error(`shotkit: demo entry ${index} must be an object`);
+      throw new Error(`take-a-repo: demo entry ${index} must be an object`);
     }
-    if (!demo.name) throw new Error(`shotkit: demo entry ${index} needs a name`);
-    if (typeof demo.run !== 'function') throw new Error(`shotkit: demo "${demo.name}" needs run({ page, demo })`);
+    if (!demo.name) throw new Error(`take-a-repo: demo entry ${index} needs a name`);
+    if (typeof demo.run !== 'function') throw new Error(`take-a-repo: demo "${demo.name}" needs run({ page, demo })`);
     if (demo.captions != null && !Array.isArray(demo.captions)) {
-      throw new Error(`shotkit: demo "${demo.name}".captions must be an array`);
+      throw new Error(`take-a-repo: demo "${demo.name}".captions must be an array`);
     }
     return demo;
   });
   const expanded = validated.flatMap(expandDemoTargets);
   const seen = new Set();
   for (const demo of expanded) {
-    if (seen.has(demo.name)) throw new Error(`shotkit: duplicate demo name "${demo.name}"`);
+    if (seen.has(demo.name)) throw new Error(`take-a-repo: duplicate demo name "${demo.name}"`);
     seen.add(demo.name);
   }
   return expanded;
 }
 
 function demoCaptionInitScript(options = {}) {
-  const rootId = '__shotkit_demo_caption__';
-  const pointerId = '__shotkit_demo_pointer__';
-  const styleId = '__shotkit_demo_caption_style__';
+  const rootId = '__take-a-repo_demo_caption__';
+  const pointerId = '__take-a-repo_demo_pointer__';
+  const styleId = '__take-a-repo_demo_caption_style__';
   const baseOptions = {
     position: options.position || 'bottom-left',
     typography: options.typography && typeof options.typography === 'object'
@@ -157,37 +157,37 @@ function demoCaptionInitScript(options = {}) {
       #${rootId}[data-mode="focus"][data-appearance="outline"][data-condensed="true"] {
         font-size: 32px;
       }
-      #${rootId}[data-appearance="outline"] .shotkit-caption-word {
+      #${rootId}[data-appearance="outline"] .take-a-repo-caption-word {
         color: #fff;
         -webkit-text-stroke: 2px rgba(7,10,15,.92);
         paint-order: stroke fill;
         text-shadow: inherit;
       }
-      #${rootId}[data-appearance="outline"] .shotkit-caption-word[data-active="true"] {
-        color: var(--shotkit-caption-active-color, #facc15);
+      #${rootId}[data-appearance="outline"] .take-a-repo-caption-word[data-active="true"] {
+        color: var(--take-a-repo-caption-active-color, #facc15);
         text-shadow: 0 2px 0 rgba(0,0,0,.62), 0 6px 13px rgba(0,0,0,.3);
         animation-duration: 230ms;
       }
-      #${rootId} .shotkit-caption-word {
+      #${rootId} .take-a-repo-caption-word {
         display: inline-block;
         color: rgba(255,255,255,.72);
         transform-origin: center bottom;
         white-space: pre-wrap;
       }
-      #${rootId} .shotkit-caption-word::before { content: attr(data-before); }
-      #${rootId} .shotkit-caption-word::after { content: attr(data-after); }
-      #${rootId} .shotkit-caption-word[data-active="true"] {
-        color: var(--shotkit-caption-active-color, #facc15);
+      #${rootId} .take-a-repo-caption-word::before { content: attr(data-before); }
+      #${rootId} .take-a-repo-caption-word::after { content: attr(data-after); }
+      #${rootId} .take-a-repo-caption-word[data-active="true"] {
+        color: var(--take-a-repo-caption-active-color, #facc15);
         text-shadow: 0 2px 14px rgba(0,0,0,.52);
-        animation: shotkit-caption-focus-pop 180ms cubic-bezier(.2,.9,.3,1.2);
+        animation: take-a-repo-caption-focus-pop 180ms cubic-bezier(.2,.9,.3,1.2);
       }
       #${rootId}[data-position="bottom-left"] {
         left: max(28px, env(safe-area-inset-left));
-        bottom: max(var(--shotkit-caption-bottom-offset, 26px), env(safe-area-inset-bottom));
+        bottom: max(var(--take-a-repo-caption-bottom-offset, 26px), env(safe-area-inset-bottom));
       }
       #${rootId}[data-position="bottom"] {
         left: 50%;
-        bottom: max(var(--shotkit-caption-bottom-offset, 26px), env(safe-area-inset-bottom));
+        bottom: max(var(--take-a-repo-caption-bottom-offset, 26px), env(safe-area-inset-bottom));
         transform: translate(-50%, 8px);
         text-align: center;
       }
@@ -202,10 +202,10 @@ function demoCaptionInitScript(options = {}) {
         }
         #${rootId}[data-position="bottom-left"] {
           left: max(18px, env(safe-area-inset-left));
-          bottom: max(var(--shotkit-caption-bottom-offset, 18px), env(safe-area-inset-bottom));
+          bottom: max(var(--take-a-repo-caption-bottom-offset, 18px), env(safe-area-inset-bottom));
         }
         #${rootId}[data-position="bottom"] {
-          bottom: max(var(--shotkit-caption-bottom-offset, 18px), env(safe-area-inset-bottom));
+          bottom: max(var(--take-a-repo-caption-bottom-offset, 18px), env(safe-area-inset-bottom));
         }
         #${rootId}[data-mode="focus"] {
           width: calc(100vw - 220px);
@@ -275,13 +275,13 @@ function demoCaptionInitScript(options = {}) {
         transform: scale(.6);
       }
       #${pointerId}[data-clicking="true"]::after {
-        animation: shotkit-click-ripple 520ms ease-out;
+        animation: take-a-repo-click-ripple 520ms ease-out;
       }
-      @keyframes shotkit-click-ripple {
+      @keyframes take-a-repo-click-ripple {
         0% { opacity: .95; transform: scale(.6); }
         100% { opacity: 0; transform: scale(1.9); }
       }
-      @keyframes shotkit-caption-focus-pop {
+      @keyframes take-a-repo-caption-focus-pop {
         0% { opacity: .55; transform: translateY(4px) scale(.94); }
         70% { opacity: 1; transform: translateY(-1px) scale(1.04); }
         100% { opacity: 1; transform: translateY(0) scale(1); }
@@ -320,7 +320,7 @@ function demoCaptionInitScript(options = {}) {
   }
 
   function captionLines(root) {
-    const words = Array.from(root.querySelectorAll('.shotkit-caption-word'));
+    const words = Array.from(root.querySelectorAll('.take-a-repo-caption-word'));
     const rects = words.length
       ? words.map((word) => ({
         top: word.offsetTop,
@@ -449,11 +449,11 @@ function demoCaptionInitScript(options = {}) {
       root.style.removeProperty('font-size');
     }
     if (Number.isFinite(nextOptions.bottomOffset) && nextOptions.bottomOffset >= 0) {
-      root.style.setProperty('--shotkit-caption-bottom-offset', `${Math.round(nextOptions.bottomOffset)}px`);
+      root.style.setProperty('--take-a-repo-caption-bottom-offset', `${Math.round(nextOptions.bottomOffset)}px`);
     } else {
-      root.style.removeProperty('--shotkit-caption-bottom-offset');
+      root.style.removeProperty('--take-a-repo-caption-bottom-offset');
     }
-    root.style.setProperty('--shotkit-caption-active-color', nextOptions.activeColor || '#facc15');
+    root.style.setProperty('--take-a-repo-caption-active-color', nextOptions.activeColor || '#facc15');
     root.textContent = '';
     if (root.dataset.mode === 'focus' && (Array.isArray(nextOptions.focusSegments)
       || Array.isArray(nextOptions.focusWords))) {
@@ -468,7 +468,7 @@ function demoCaptionInitScript(options = {}) {
         // Use an element most page translators do not scan. The root's
         // translate=no marker covers standards-aware localization tools too.
         const wordElement = document.createElement('b');
-        wordElement.className = 'shotkit-caption-word';
+        wordElement.className = 'take-a-repo-caption-word';
         wordElement.dataset.active = index === nextOptions.activeWordIndex ? 'true' : 'false';
         wordElement.dataset.before = String(segment.before || '');
         wordElement.dataset.after = String(segment.after || '');
@@ -488,7 +488,7 @@ function demoCaptionInitScript(options = {}) {
 
     const rect = root.getBoundingClientRect();
     const rootStyle = window.getComputedStyle(root);
-    const firstWord = root.querySelector('.shotkit-caption-word');
+    const firstWord = root.querySelector('.take-a-repo-caption-word');
     const textStyle = firstWord ? window.getComputedStyle(firstWord) : rootStyle;
     const stroke = textStyle.webkitTextStrokeWidth
       || textStyle.getPropertyValue('-webkit-text-stroke-width')
@@ -559,8 +559,8 @@ function demoCaptionInitScript(options = {}) {
     if (pointer) pointer.dataset.visible = 'false';
   }
 
-  window.__shotkitDemoCaption = { show, hide, ready: loadCaptionFonts };
-  window.__shotkitDemoPointer = { move: movePointer, pulse: pulsePointer, hide: hidePointer };
+  window.__takeARepoDemoCaption = { show, hide, ready: loadCaptionFonts };
+  window.__takeARepoDemoPointer = { move: movePointer, pulse: pulsePointer, hide: hidePointer };
   void loadCaptionFonts();
   const install = () => ensureRoot();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true });
@@ -579,7 +579,7 @@ async function ensureDemoCaptionOverlay(page, options = {}) {
 async function renderDemoCaption(page, text, options = {}) {
   return page.evaluate(
     ({ captionText, captionOptions }) => {
-      return window.__shotkitDemoCaption.show(captionText, captionOptions);
+      return window.__takeARepoDemoCaption.show(captionText, captionOptions);
     },
     {
       captionText: String(text),
@@ -595,12 +595,12 @@ async function setDemoCaption(page, text, options = {}) {
 
 async function hideDemoCaption(page) {
   await page.evaluate(() => {
-    if (window.__shotkitDemoCaption) window.__shotkitDemoCaption.hide();
+    if (window.__takeARepoDemoCaption) window.__takeARepoDemoCaption.hide();
   });
 }
 
 function hasDemoPointerOverlay() {
-  return !!window.__shotkitDemoPointer;
+  return !!window.__takeARepoDemoPointer;
 }
 
 async function moveDemoPointer(page, point, options = {}) {
@@ -608,7 +608,7 @@ async function moveDemoPointer(page, point, options = {}) {
   if (!installed) await ensureDemoCaptionOverlay(page);
   await page.evaluate(
     ({ pointerPoint, pointerOptions }) => {
-      window.__shotkitDemoPointer.move(pointerPoint, pointerOptions);
+      window.__takeARepoDemoPointer.move(pointerPoint, pointerOptions);
     },
     { pointerPoint: point, pointerOptions: options },
   );
@@ -616,13 +616,13 @@ async function moveDemoPointer(page, point, options = {}) {
 
 async function pulseDemoPointer(page) {
   await page.evaluate(() => {
-    if (window.__shotkitDemoPointer) window.__shotkitDemoPointer.pulse();
+    if (window.__takeARepoDemoPointer) window.__takeARepoDemoPointer.pulse();
   });
 }
 
 async function hideDemoPointer(page) {
   await page.evaluate(() => {
-    if (window.__shotkitDemoPointer) window.__shotkitDemoPointer.hide();
+    if (window.__takeARepoDemoPointer) window.__takeARepoDemoPointer.hide();
   });
 }
 
@@ -656,7 +656,7 @@ async function clickTarget(page, target, clickOptions) {
   if (isPoint(target) && page.mouse && typeof page.mouse.click === 'function') {
     return page.mouse.click(target.x, target.y, clickOptions);
   }
-  throw new Error('shotkit: demo.click target must be a selector string, Locator, or { x, y } point');
+  throw new Error('take-a-repo: demo.click target must be a selector string, Locator, or { x, y } point');
 }
 
 function createDemoController({

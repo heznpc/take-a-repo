@@ -5,7 +5,7 @@ const { PNG } = require('pngjs');
 const { analyzePng } = require('../src/image-qa');
 
 function writePng(fill) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-png-qa-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-png-qa-'));
   const filePath = path.join(dir, 'frame.png');
   const png = new PNG({ width: 32, height: 32 });
   for (let y = 0; y < 32; y++) {
@@ -36,7 +36,7 @@ describe('thumbnail pixel QA', () => {
   });
 
   test('returns a structured failure for an invalid PNG', () => {
-    const filePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-png-qa-')), 'bad.png');
+    const filePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-png-qa-')), 'bad.png');
     fs.writeFileSync(filePath, 'not a png');
     expect(analyzePng(filePath)).toMatchObject({ ok: false, nonBlank: false });
   });

@@ -18,7 +18,7 @@ function loadSchema(name) {
 }
 
 function buildSampleDocs() {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-schema-'));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-schema-'));
   const outDir = path.join(cwd, 'store-assets');
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(
@@ -75,7 +75,7 @@ describe('handoff docs conform to the published JSON schemas', () => {
   const cases = [
     ['storyboard', 'storyboard.schema.json', docs.storyboard],
     ['captions', 'captions.schema.json', docs.captions],
-    ['manifest', 'shotkit-manifest.schema.json', docs.manifest],
+    ['manifest', 'take-a-repo-manifest.schema.json', docs.manifest],
   ];
 
   for (const [label, schemaFile, doc] of cases) {
@@ -123,9 +123,9 @@ describe('handoff docs conform to the published JSON schemas', () => {
   it('validates the user approval document contract', () => {
     const validate = ajv.compile(loadSchema('approval.schema.json'));
     const document = {
-      $schema: 'urn:starter-series:shotkit:schema:approval:v1',
+      $schema: 'urn:starter-series:take-a-repo:schema:approval:v1',
       version: 1,
-      kind: 'shotkit.approval',
+      kind: 'take-a-repo.approval',
       decisions: {
         launch: {
           'youtube-shorts': {
@@ -156,7 +156,7 @@ describe('handoff docs conform to the published JSON schemas', () => {
       delete asset.bytes;
       delete asset.integrity;
     }
-    const schema = loadSchema('shotkit-manifest.schema.json');
+    const schema = loadSchema('take-a-repo-manifest.schema.json');
     const validate = ajv.getSchema(schema.$id) || ajv.compile(schema);
     expect(validate(legacy)).toBe(true);
   });

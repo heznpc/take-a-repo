@@ -5,8 +5,8 @@ const { CHANNEL_PROFILES } = require('./channels');
 const { normalizeDemoConfigs } = require('./demo');
 const { readJsonIfExists, writeJson } = require('./handoff-files');
 
-const CAMPAIGN_FILE = 'shotkit-campaign.json';
-const CAMPAIGN_KIND = 'shotkit.campaign-selection';
+const CAMPAIGN_FILE = 'take-a-repo-campaign.json';
+const CAMPAIGN_KIND = 'take-a-repo.campaign-selection';
 const CAMPAIGN_VERSION = 1;
 
 function humanize(value) {
@@ -21,7 +21,7 @@ function recipeId(value, fallback) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  if (!id) throw new Error('shotkit: campaign recipe needs an id');
+  if (!id) throw new Error('take-a-repo: campaign recipe needs an id');
   return id;
 }
 
@@ -54,11 +54,11 @@ function configuredStories(config) {
 function validateCampaignConfig(config) {
   if (config.campaign == null) return null;
   if (!config.campaign || typeof config.campaign !== 'object' || Array.isArray(config.campaign)) {
-    throw new Error('shotkit: config.campaign must be an object');
+    throw new Error('take-a-repo: config.campaign must be an object');
   }
   if (config.campaign.recipes == null) return null;
   if (!Array.isArray(config.campaign.recipes) || !config.campaign.recipes.length) {
-    throw new Error('shotkit: config.campaign.recipes must be a non-empty array');
+    throw new Error('take-a-repo: config.campaign.recipes must be a non-empty array');
   }
   return config.campaign.recipes;
 }
@@ -71,22 +71,22 @@ function resolveCampaignRecipes(config = {}) {
 
   return source.map((entry, index) => {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
-      throw new Error(`shotkit: campaign recipe ${index} must be an object`);
+      throw new Error(`take-a-repo: campaign recipe ${index} must be an object`);
     }
     const story = entry.story;
     if (typeof story !== 'string' || !stories.has(story)) {
-      throw new Error(`shotkit: campaign recipe ${index} references an unknown story`);
+      throw new Error(`take-a-repo: campaign recipe ${index} references an unknown story`);
     }
     const availableTargets = stories.get(story);
     const targets = entry.targets == null ? [...availableTargets.keys()] : entry.targets;
     if (!Array.isArray(targets) || !targets.length) {
-      throw new Error(`shotkit: campaign recipe "${story}" needs at least one target`);
+      throw new Error(`take-a-repo: campaign recipe "${story}" needs at least one target`);
     }
     if (targets.some((target) => typeof target !== 'string' || !availableTargets.has(target))) {
-      throw new Error(`shotkit: campaign recipe "${story}" contains an unconfigured target`);
+      throw new Error(`take-a-repo: campaign recipe "${story}" contains an unconfigured target`);
     }
     const id = recipeId(entry.id, story);
-    if (seen.has(id)) throw new Error(`shotkit: duplicate campaign recipe id "${id}"`);
+    if (seen.has(id)) throw new Error(`take-a-repo: duplicate campaign recipe id "${id}"`);
     seen.add(id);
     const uniqueTargets = [...new Set(targets)];
     return {
@@ -111,12 +111,12 @@ function defaultSelection(recipes, preferredId) {
 }
 
 function normalizeCampaignSelection(recipes, input, options = {}) {
-  if (!recipes.length) throw new Error('shotkit: no campaign recipes are configured');
+  if (!recipes.length) throw new Error('take-a-repo: no campaign recipes are configured');
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw new Error('shotkit: campaign selection must be an object');
+    throw new Error('take-a-repo: campaign selection must be an object');
   }
   const recipe = recipes.find((item) => item.id === input.recipeId);
-  if (!recipe) throw new Error('shotkit: campaign recipe was not found');
+  if (!recipe) throw new Error('take-a-repo: campaign recipe was not found');
   return {
     kind: CAMPAIGN_KIND,
     version: CAMPAIGN_VERSION,

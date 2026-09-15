@@ -23,12 +23,12 @@ const {
 } = require('./calibrator-state');
 
 function recaptureCliArgs({ cwd, configPath, story, target, targets, attempt, noBuild = false }) {
-  const cliPath = path.join(__dirname, '..', 'bin', 'shotkit.js');
+  const cliPath = path.join(__dirname, '..', 'bin', 'take-a-repo.js');
   const targetList = targets || [target];
   const args = [cliPath, cwd, '--json', '--scene', story, '--target', targetList.join(','), '--mp4'];
   if (noBuild) args.push('--no-build');
   args.push('--attempt', String(attempt));
-  const defaultConfigNames = new Set(['shotkit.config.js', 'store.config.js']);
+  const defaultConfigNames = new Set(['take-a-repo.config.js']);
   if (!defaultConfigNames.has(path.basename(configPath))) {
     args.push('--config', path.relative(cwd, configPath));
   }
@@ -41,7 +41,7 @@ function runRecapture(options) {
   return new Promise((resolve, reject) => {
     execFile(process.execPath, args, {
       cwd,
-      env: { ...process.env, HEADED: '0' },
+      env: { ...process.env, TAKE_A_REPO_HEADED: '0' },
       timeout: 240_000,
       maxBuffer: 4 * 1024 * 1024,
     }, (error, stdout, stderr) => {
@@ -79,10 +79,10 @@ async function startCalibrator({
 }) {
   const calibrationEnabled = hasCalibration(config);
   if (view === 'calibrator' && !calibrationEnabled) {
-    throw new Error('shotkit: calibrator requires config.calibration = { from, layouts? }');
+    throw new Error('take-a-repo: calibrator requires config.calibration = { from, layouts? }');
   }
   if (!['calibrator', 'campaign'].includes(view)) {
-    throw new Error('shotkit: dashboard view must be calibrator or campaign');
+    throw new Error('take-a-repo: dashboard view must be calibrator or campaign');
   }
   const state = createStateReader({ cwd, config });
   let recapturing = false;

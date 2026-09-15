@@ -1,13 +1,13 @@
 # Changelog
 
-All notable changes to `shotkit` are documented here.
+All notable changes to `take-a-repo` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ### Added
-- `shotkit demo --for <channel>` delivers an uploadable file instead of a plain
+- `take-a-repo demo --for <channel>` delivers an uploadable file instead of a plain
   clip. The channel profile (`x`, `youtube-shorts`, `cws-youtube`) supplies
   viewport, codec, trim, and caption style, and channels are repeatable or
   comma-separated so one run produces every cut. Each delivered mp4 is then
@@ -17,7 +17,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   recording budget defaults to the channel's trim window instead of 20s, and
   `--for` requires ffmpeg (a channel deliverable *is* the H.264 file).
 - Zero-config clips now follow one scene spec instead of whatever the target's
-  markup happens to yield. `shotkit demo` rewrites the page's headings into a
+  markup happens to yield. `take-a-repo demo` rewrites the page's headings into a
   fixed shape — open on the title, one beat per content heading in page order,
   close back on the title, evenly paced — and normalizes each caption the way a
   human editor would: nav furniture (`Menu`, `On this page`, `Skip to
@@ -34,20 +34,20 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ### Fixed
 - Playwright's "browser not downloaded" failure is rewritten into an install
   command that actually works. Its own hint (`npx playwright install`) can
-  resolve a different Playwright than the one shotkit runs under when shotkit
-  was started through a bare `npx`, downloading a build shotkit never looks
-  at. The docs now lead with `npm i -D demoshot && npx playwright install
-  chromium` for the same reason.
+  resolve a different Playwright than the one take-a-repo runs under when
+  take-a-repo was started through a bare `npx`, downloading a build take-a-repo
+  never looks at. The docs now lead with `npm i -D take-a-repo && npx playwright
+  install chromium` for the same reason.
 
 ### Changed
-- The npm package name is `demoshot`: the registry rejects `shotkit` as too
-  similar to the existing `shot-kit` package. The project, repository, and
-  CLI keep the `shotkit` name, and the package installs both the `demoshot`
-  and `shotkit` commands.
+- The product, repository, npm package, and sole installed CLI now share the
+  `take-a-repo` identity. Legacy aliases, config fallbacks, environment
+  variables, branded artifact names, and schema namespaces were removed in
+  favor of one contract.
 
 ### Added
-- `shotkit demo <url|dir|file.html>` — a zero-config proof clip for any web
-  app. No `shotkit.config.js`: the clip is captioned from the page's own title
+- `take-a-repo demo <url|dir|file.html>` — a zero-config proof clip for any web
+  app. No `take-a-repo.config.js`: the clip is captioned from the page's own title
   and headings, walks the page with a paced scroll, and lands as
   `demo.webm` (+ `demo.mp4` and a thumbnail when ffmpeg exists). Static
   directories and single files are served on a local loopback port. `--json`
@@ -60,18 +60,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - A `demo` agent skill (`skills/demo/SKILL.md`) so coding agents can record a
   proof clip of what they just built without reading the full pipeline docs.
 - An explicit final user approval gate in the Calibrator. Approve and Request
-  changes decisions are stored in `shotkit-approval.json`, bound to the exact
+  changes decisions are stored in `take-a-repo-approval.json`, bound to the exact
   deliverable SHA-256 and calibration profile hash, and exposed through the
   manifest's schema-backed `handoff.approval` contract. Recapture or profile
   changes automatically invalidate stale decisions.
-- A local exception-only composition Calibrator (`shotkit --calibrate`) backed
-  by tracked `shotkit.calibration.json`: declared layout presets, bounded
+- A local exception-only composition Calibrator (`take-a-repo --calibrate`) backed
+  by tracked `take-a-repo.calibration.json`: declared layout presets, bounded
   framing, caption lane/appearance controls, up to three protected regions,
   actual capture media, and save-then-recapture verification.
 - Protected-region collision QA and profile hashes. Changed calibration stays
   `needs-fix` until the exact profile produces a real `publish-ready` capture.
 - Autonomous channel profiles for `cws-youtube`, `x`, and `youtube-shorts`.
-  One demo story can declare `targets[]`; shotkit expands target variants and
+  One demo story can declare `targets[]`; take-a-repo expands target variants and
   applies viewport, H.264, duration-cap, caption, and thumbnail defaults.
 - Final MP4 probing through ffprobe plus PNG pixel QA for blank/uniform poster
   frames. The manifest now carries per-target checks and media metadata.
@@ -100,8 +100,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   manifest-level review summary, and the number of asset-ready adapters.
 
 ### Changed
-- Package identity is now the unscoped npm product noun `shotkit`.
-- The handoff manifest `tool` field now emits `shotkit`, matching the package
+- Package identity is now the unscoped npm command phrase `take-a-repo`.
+- The handoff manifest `tool` field now emits `take-a-repo`, matching the package
   and CLI identity.
 - `--json` success results now return the absolute `manifest` entrypoint.
 - Public messaging now leads with the autonomous launch asset pipeline and its

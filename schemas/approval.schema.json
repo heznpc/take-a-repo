@@ -1,14 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:starter-series:shotkit:schema:approval:v1",
-  "title": "shotkit user approval decisions",
+  "$id": "urn:starter-series:take-a-repo:schema:approval:v1",
+  "title": "take-a-repo user approval decisions",
   "type": "object",
   "additionalProperties": false,
   "required": ["$schema", "version", "kind", "decisions"],
   "properties": {
-    "$schema": { "const": "urn:starter-series:shotkit:schema:approval:v1" },
+    "$schema": { "const": "urn:starter-series:take-a-repo:schema:approval:v1" },
     "version": { "const": 1 },
-    "kind": { "const": "shotkit.approval" },
+    "kind": { "const": "take-a-repo.approval" },
     "decisions": {
       "type": "object",
       "propertyNames": {

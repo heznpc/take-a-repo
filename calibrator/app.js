@@ -207,7 +207,7 @@ import { createRegionEditor } from './regions.js';
     elements.targetList.replaceChildren();
     elements.layoutList.replaceChildren();
     elements.captureName.textContent = 'No calibrated target';
-    elements.captureIdentity.textContent = 'Add a channel target to shotkit.config.js';
+    elements.captureIdentity.textContent = 'Add a channel target to take-a-repo.config.js';
     elements.mediaEmpty.hidden = false;
     elements.previewVideo.hidden = true;
     elements.recaptureButton.disabled = true;

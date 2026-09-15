@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:starter-series:shotkit:schema:captions:v1",
-  "title": "shotkit captions handoff",
+  "$id": "urn:starter-series:take-a-repo:schema:captions:v1",
+  "title": "take-a-repo captions handoff",
   "type": "object",
   "additionalProperties": true,
   "required": ["$schema", "kind", "version", "generatedAt", "project", "demos"],
   "properties": {
-    "$schema": { "const": "urn:starter-series:shotkit:schema:captions:v1" },
-    "kind": { "const": "shotkit.captions" },
+    "$schema": { "const": "urn:starter-series:take-a-repo:schema:captions:v1" },
+    "kind": { "const": "take-a-repo.captions" },
     "version": { "const": 1 },
     "generatedAt": { "type": "string", "format": "date-time" },
     "project": { "type": "object", "additionalProperties": true },

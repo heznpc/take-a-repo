@@ -20,14 +20,14 @@ function isObject(value) {
 }
 
 function nonEmptyString(value, name) {
-  if (typeof value !== 'string' || !value.trim()) throw new Error(`shotkit: ${name} must be a non-empty string`);
+  if (typeof value !== 'string' || !value.trim()) throw new Error(`take-a-repo: ${name} must be a non-empty string`);
   return value.trim();
 }
 
 function boundedNumber(value, fallback, name, min, max, integer = false) {
   const resolved = value == null ? fallback : value;
   if (!Number.isFinite(resolved) || resolved < min || resolved > max || (integer && !Number.isInteger(resolved))) {
-    throw new Error(`shotkit: caption typography.${name} must be ${integer ? 'an integer' : 'a number'} between ${min} and ${max}`);
+    throw new Error(`take-a-repo: caption typography.${name} must be ${integer ? 'an integer' : 'a number'} between ${min} and ${max}`);
   }
   return resolved;
 }
@@ -36,18 +36,18 @@ function fontWeight(value, name) {
   if (value == null) return null;
   if (Number.isInteger(value) && value >= 1 && value <= 1000) return String(value);
   if (typeof value === 'string' && value.trim()) return value.trim();
-  throw new Error(`shotkit: ${name} must be a font weight or variable weight range`);
+  throw new Error(`take-a-repo: ${name} must be a font weight or variable weight range`);
 }
 
 function normalizeFont(font, index) {
-  if (!isObject(font)) throw new Error(`shotkit: caption typography.fonts[${index}] must be an object`);
+  if (!isObject(font)) throw new Error(`take-a-repo: caption typography.fonts[${index}] must be an object`);
   const unknown = Object.keys(font).filter((key) => !FONT_KEYS.has(key));
   if (unknown.length) {
-    throw new Error(`shotkit: caption typography.fonts[${index}] has unknown field(s): ${unknown.join(', ')}`);
+    throw new Error(`take-a-repo: caption typography.fonts[${index}] has unknown field(s): ${unknown.join(', ')}`);
   }
   const style = font.style == null ? 'normal' : font.style;
   if (!['normal', 'italic', 'oblique'].includes(style)) {
-    throw new Error(`shotkit: caption typography.fonts[${index}].style must be normal, italic, or oblique`);
+    throw new Error(`take-a-repo: caption typography.fonts[${index}].style must be normal, italic, or oblique`);
   }
   return {
     family: nonEmptyString(font.family, `caption typography.fonts[${index}].family`),
@@ -81,14 +81,14 @@ function normalizeTypographyOptions(captionOptions = {}) {
       fonts: [],
     };
   }
-  if (!isObject(raw)) throw new Error('shotkit: caption typography must be an object');
+  if (!isObject(raw)) throw new Error('take-a-repo: caption typography must be an object');
   const unknown = Object.keys(raw).filter((key) => !TYPOGRAPHY_KEYS.has(key));
-  if (unknown.length) throw new Error(`shotkit: caption typography has unknown field(s): ${unknown.join(', ')}`);
+  if (unknown.length) throw new Error(`take-a-repo: caption typography has unknown field(s): ${unknown.join(', ')}`);
   const locale = canonicalLocale(raw.locale);
   const direction = textDirection(locale, raw.direction || 'auto');
   const fonts = raw.fonts == null ? [] : raw.fonts;
   if (!Array.isArray(fonts) || fonts.length > MAX_FONTS) {
-    throw new Error(`shotkit: caption typography.fonts must be an array with at most ${MAX_FONTS} entries`);
+    throw new Error(`take-a-repo: caption typography.fonts must be an array with at most ${MAX_FONTS} entries`);
   }
   const normalizedFonts = fonts.map(normalizeFont);
   const family = raw.family == null
@@ -100,10 +100,10 @@ function normalizeTypographyOptions(captionOptions = {}) {
     ? []
     : normalizedFonts.filter((font) => !family.toLowerCase().includes(font.family.toLowerCase()));
   if (unreferencedFonts.length) {
-    throw new Error(`shotkit: caption typography.family must reference configured font family: ${unreferencedFonts.map((font) => font.family).join(', ')}`);
+    throw new Error(`take-a-repo: caption typography.family must reference configured font family: ${unreferencedFonts.map((font) => font.family).join(', ')}`);
   }
   const fit = raw.fit == null ? 'shrink' : raw.fit;
-  if (!['none', 'shrink'].includes(fit)) throw new Error('shotkit: caption typography.fit must be "none" or "shrink"');
+  if (!['none', 'shrink'].includes(fit)) throw new Error('take-a-repo: caption typography.fit must be "none" or "shrink"');
   const minFontSize = boundedNumber(raw.minFontSize, 22, 'minFontSize', 12, 96, true);
   const maxFontSize = raw.maxFontSize == null
     ? null
@@ -157,17 +157,17 @@ function fontPath(cwd, from) {
   try {
     resolved = fs.realpathSync(requested);
   } catch (error) {
-    throw new Error(`shotkit: caption font was not found: ${from}`, { cause: error });
+    throw new Error(`take-a-repo: caption font was not found: ${from}`, { cause: error });
   }
   if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
-    throw new Error('shotkit: caption typography font paths must stay inside the project directory');
+    throw new Error('take-a-repo: caption typography font paths must stay inside the project directory');
   }
   if (!FONT_EXTENSIONS.has(path.extname(resolved).toLowerCase())) {
-    throw new Error(`shotkit: unsupported caption font format: ${path.extname(resolved) || '(none)'}`);
+    throw new Error(`take-a-repo: unsupported caption font format: ${path.extname(resolved) || '(none)'}`);
   }
   const stats = fs.statSync(resolved);
   if (!stats.isFile() || stats.size > MAX_FONT_BYTES) {
-    throw new Error(`shotkit: caption font must be a file no larger than ${MAX_FONT_BYTES} bytes`);
+    throw new Error(`take-a-repo: caption font must be a file no larger than ${MAX_FONT_BYTES} bytes`);
   }
   return resolved;
 }
@@ -207,10 +207,10 @@ async function prepareCaptionTypography(captionOptions = {}, cwd, texts = []) {
     try {
       parsed = fontkit.create(buffer, font.postscriptName);
     } catch (error) {
-      throw new Error(`shotkit: could not parse caption font ${font.from}: ${error.message}`, { cause: error });
+      throw new Error(`take-a-repo: could not parse caption font ${font.from}: ${error.message}`, { cause: error });
     }
     if (!parsed || typeof parsed.hasGlyphForCodePoint !== 'function') {
-      throw new Error(`shotkit: caption font ${font.from} needs postscriptName for its font collection`);
+      throw new Error(`take-a-repo: caption font ${font.from} needs postscriptName for its font collection`);
     }
     const subsetText = ` ${Array.from(characters)
       .filter(([codePoint]) => parsed.hasGlyphForCodePoint(codePoint))
@@ -230,7 +230,7 @@ async function prepareCaptionTypography(captionOptions = {}, cwd, texts = []) {
           ...(variationAxes ? { variationAxes } : {}),
         });
       } catch (error) {
-        throw new Error(`shotkit: could not subset caption font ${font.from}: ${error.message}`, { cause: error });
+        throw new Error(`take-a-repo: could not subset caption font ${font.from}: ${error.message}`, { cause: error });
       }
     }
     return {
@@ -244,7 +244,7 @@ async function prepareCaptionTypography(captionOptions = {}, cwd, texts = []) {
   }));
   const missingGlyphs = [];
   for (const [codePoint, character] of characters) {
-    if (!prepared.some((font) => font.parsed.hasGlyphForCodePoint(codePoint))) {
+    if (prepared.length && !prepared.some((font) => font.parsed.hasGlyphForCodePoint(codePoint))) {
       missingGlyphs.push({ character, codePoint: codePointLabel(codePoint) });
     }
   }

@@ -1,7 +1,7 @@
 /*
- * shotkit quick demo — zero-config proof clip for any web app.
+ * take-a-repo quick demo — zero-config proof clip for any web app.
  *
- * `shotkit demo <url|dir|file.html>` needs no shotkit.config.js: it
+ * `take-a-repo demo <url|dir|file.html>` needs no take-a-repo.config.js: it
  * synthesizes a one-demo config that loads the target, captions the clip with
  * the page's own title and headings, and walks the page with a paced scroll,
  * so the recording proves the app actually renders from a clean run. Video
@@ -21,10 +21,12 @@ const {
 } = require('./demo-script');
 const { serveDirectory } = require('./serve');
 const { INSTALL_HINT, findFfmpeg, probeVideo } = require('./video');
+const { languageTag, surveyPage, resolveAuthoredScript } = require('./demo-authoring');
+const { analyzeDemoCaptionMetrics } = require('./demo-caption-qa');
 
 const CHANNEL_IDS = Object.keys(CHANNEL_PROFILES);
 const DEFAULT_DEMO_NAME = 'demo';
-const DEFAULT_OUT_DIR = 'shotkit-demo';
+const DEFAULT_OUT_DIR = 'take-a-repo-demo';
 const DEFAULT_DURATION_S = 20;
 const MIN_DURATION_S = 5;
 const MAX_DURATION_S = 120;
@@ -40,7 +42,7 @@ function usageError(message) {
 }
 
 /**
- * Classify what the user pointed shotkit at.
+ * Classify what the user pointed take-a-repo at.
  * @returns {{kind:'url',url:string}|{kind:'static',dir:string,fallback:string}}
  */
 function resolveDemoTarget(input, cwd = process.cwd()) {
@@ -131,16 +133,19 @@ function verifyChannelOutputs(produced, channels, demoName = DEFAULT_DEMO_NAME) 
  * inside the standard demo controller, so captions land in the recorded clip
  * and in caption QA metrics.
  */
-function makeQuickDemoRun({ url, durationS }) {
+function makeQuickDemoRun({ url, durationS, authoredScript }) {
   async function quickDemoRun({ page, demo, baseUrl }) {
     const startUrl = url || baseUrl;
     if (!startUrl) throw new Error('quick demo: no target URL (static server did not provide baseUrl)');
 
-    await page.goto(startUrl, { waitUntil: 'load', timeout: 30_000 });
+    const response = await page.goto(startUrl, { waitUntil: 'load', timeout: 30_000 });
+    if (!response || !response.ok()) {
+      throw new Error(`quick demo: navigation failed (HTTP ${response ? response.status() : 'no response'})`);
+    }
     // Settle async rendering without hanging on dev servers that never go idle.
     await page.waitForLoadState('networkidle', { timeout: 6_000 }).catch(() => {});
 
-    const surveyed = await page.evaluate(() => {
+    const surveyed = authoredScript ? await surveyPage(page) : await page.evaluate(() => {
       const body = document.body;
       const doc = document.documentElement;
       const headings = Array.from(document.querySelectorAll('h1, h2, h3'))
@@ -162,7 +167,7 @@ function makeQuickDemoRun({ url, durationS }) {
       };
     });
 
-    const script = planDemoScript(
+    const script = authoredScript ? resolveAuthoredScript(authoredScript, surveyed) : planDemoScript(
       { ...surveyed, title: surveyed.title || startUrl },
       {
         durationS,
@@ -176,7 +181,7 @@ function makeQuickDemoRun({ url, durationS }) {
     // violates our own caption/scene spec rather than shipping an off-spec clip.
     const check = verifyDemoScript(script);
     if (!check.ok) {
-      throw new Error(`shotkit: generated demo script is off-spec: ${check.problems.join('; ')}`);
+      throw new Error(`take-a-repo: generated demo script is off-spec: ${check.problems.join('; ')}`);
     }
 
     for (const beat of script.beats) {
@@ -189,6 +194,17 @@ function makeQuickDemoRun({ url, durationS }) {
       await demo.wait(beat.holdMs);
     }
     await demo.hide();
+    if (authoredScript) {
+      const metrics = demo.captionMetrics();
+      const warnings = analyzeDemoCaptionMetrics(metrics);
+      const failures = warnings.filter((warning) => warning.code !== 'caption-font-not-embedded');
+      if (script.beats.some((beat) => !metrics.samples.some((sample) => (sample.sourceText || sample.text) === beat.text))) {
+        throw new Error('demo script: an authored caption was not observed in the rendered page');
+      }
+      if (failures.length) throw new Error(`demo script: caption QA failed: ${failures.map((warning) => warning.code).join(', ')}`);
+      quickDemoRun.captionReport = { language: authoredScript.language, sourceDigest: authoredScript.sourceDigest,
+        fontDeterministic: metrics.typography.deterministic, warnings, metrics };
+    }
     // Hand the executed script back so the CLI can report what was recorded.
     quickDemoRun.script = script;
     return script;
@@ -205,7 +221,7 @@ function makeQuickDemoRun({ url, durationS }) {
  * @param {object} opts
  * @param {{kind:string,url?:string,dir?:string,fallback?:string}} opts.target  from resolveDemoTarget()
  * @param {string} [opts.name]        demo/asset name (default "demo")
- * @param {string} [opts.outDir]      output dir (default "shotkit-demo")
+ * @param {string} [opts.outDir]      output dir (default "take-a-repo-demo")
  * @param {number} [opts.durationS]   clip length budget in seconds (default 20,
  *                                    or the channel's trim length with channels)
  * @param {boolean|'auto'} [opts.mp4] 'auto' = mp4+thumbnail when ffmpeg is found;
@@ -223,10 +239,14 @@ function buildQuickDemoConfig({
   mp4 = 'auto',
   channels = [],
   viewport,
+  authoredScript,
+  font,
   env = process.env,
 } = {}) {
   if (!target || !target.kind) throw usageError('buildQuickDemoConfig: target required (use resolveDemoTarget)');
   const profiles = normalizeChannels(channels).map((id) => resolveChannelProfile(id));
+  if (authoredScript && durationS != null) throw usageError('--duration cannot override authored beat timing; edit holdMs in the script');
+  if (authoredScript && profiles.length) throw usageError('localized quick scripts currently support plain clips; use a capture config for channel variants');
   // A channel deliverable IS the H.264 file, so ffmpeg stops being optional.
   if (profiles.length && !findFfmpeg(env)) {
     throw usageError(`--for needs a channel-ready H.264 file, but ${INSTALL_HINT}`);
@@ -252,8 +272,16 @@ function buildQuickDemoConfig({
     run: makeQuickDemoRun({
       url: target.kind === 'url' ? target.url : null,
       durationS: clampedDurationS,
+      authoredScript,
     }),
   };
+  if (authoredScript) {
+    demo.captionTexts = authoredScript.beats.map((beat) => beat.text);
+    demo.captionOptions = { typography: {
+      locale: authoredScript.language,
+      ...(font ? { fonts: [{ family: 'DemoLocal', from: font }] } : {}),
+    } };
+  }
   if (profiles.length) {
     // The channel profile owns viewport, preset, codec, trim, and thumbnail —
     // expandDemoTargets applies them and emits one demo per channel.
@@ -282,15 +310,20 @@ function buildQuickDemoConfig({
   return config;
 }
 
-const DEMO_USAGE = `shotkit demo — record a captioned proof clip of any web app, no config needed
+const DEMO_USAGE = `take-a-repo demo — record a captioned proof clip of any web app, no config needed
 
-Usage: shotkit demo <url|dir|file.html> [options]
+Usage: take-a-repo demo <url|dir|file.html> [options]
 
 Arguments:
   target            what to record: an http(s) URL (dev server), a static
                     directory (served locally), or a single .html file
 
 Options:
+  --lang <locale>   request agent-authored captions (e.g. ko); without --script,
+                    returns needs-script and a page brief, not an English video
+  --brief           inspect the page and return an authoring brief without recording
+  --script <file>   record validated agent-authored JSON captions against that brief
+  --font <file>     project-local font for deterministic localized rendering
   --for <channel>   deliver a channel-ready file instead of a plain clip;
                     repeatable or comma-separated. The channel owns viewport,
                     codec, duration, and caption style, and the result is
@@ -328,6 +361,10 @@ function parseDemoArgs(argv) {
     json: false,
     help: false,
     errors: [],
+    language: null,
+    brief: false,
+    script: null,
+    font: null,
   };
   const takeValue = (flag, i) => {
     const value = argv[i + 1];
@@ -341,6 +378,16 @@ function parseDemoArgs(argv) {
     const a = argv[i];
     if (a === '-h' || a === '--help') opts.help = true;
     else if (a === '--json') opts.json = true;
+    else if (a === '--brief') opts.brief = true;
+    else if (['--lang', '--script', '--font'].includes(a)) {
+      const v = takeValue(a, i);
+      if (v != null) {
+        i++;
+        if (a === '--lang') {
+          try { opts.language = languageTag(v); } catch (error) { opts.errors.push(error.message); }
+        } else opts[a.slice(2)] = v;
+      }
+    }
     else if (a === '--no-mp4') opts.mp4 = false;
     else if (a === '--out') { const v = takeValue(a, i); if (v != null) { opts.out = v; i++; } }
     else if (a === '--name') { const v = takeValue(a, i); if (v != null) { opts.name = v; i++; } }
@@ -367,6 +414,8 @@ function parseDemoArgs(argv) {
     else opts.errors.push(`unexpected argument: ${a}`);
   }
   if (!opts.help && !opts.target) opts.errors.push('demo target required (a URL, directory, or .html file)');
+  if (opts.brief && opts.script) opts.errors.push('--brief cannot be combined with --script');
+  if (opts.font && !opts.script) opts.errors.push('--font requires --script');
   opts.channels = [...new Set(opts.channels)];
   if (opts.channels.length && opts.mp4 === false) {
     opts.errors.push('--no-mp4 cannot be combined with --for (a channel deliverable is the mp4)');

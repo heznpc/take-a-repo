@@ -4,11 +4,11 @@ const RTL_SCRIPTS = new Set([
 
 function canonicalLocale(value) {
   if (value == null || value === '') return 'und';
-  if (typeof value !== 'string') throw new Error('shotkit: caption typography.locale must be a string');
+  if (typeof value !== 'string') throw new Error('take-a-repo: caption typography.locale must be a string');
   try {
     return Intl.getCanonicalLocales(value.trim())[0] || 'und';
   } catch (error) {
-    throw new Error(`shotkit: caption typography.locale "${value}" is invalid`, { cause: error });
+    throw new Error(`take-a-repo: caption typography.locale "${value}" is invalid`, { cause: error });
   }
 }
 
@@ -22,7 +22,7 @@ function localeScript(locale) {
 
 function textDirection(locale, requested = 'auto') {
   if (!['auto', 'ltr', 'rtl'].includes(requested)) {
-    throw new Error('shotkit: caption typography.direction must be "auto", "ltr", or "rtl"');
+    throw new Error('take-a-repo: caption typography.direction must be "auto", "ltr", or "rtl"');
   }
   if (requested !== 'auto') return requested;
   return RTL_SCRIPTS.has(localeScript(locale)) ? 'rtl' : 'ltr';

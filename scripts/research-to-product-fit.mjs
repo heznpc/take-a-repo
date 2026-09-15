@@ -11,7 +11,7 @@ const defaultOutRoot = path.join(repoRoot, 'research-runs');
 
 function usage() {
   return `Usage:
-  npm run research -- --topic "shotkit demo video quality automation" [--dry-run]
+  npm run research -- --topic "take-a-repo demo video quality automation" [--dry-run]
 
 Options:
   --topic <text>       Required research topic.

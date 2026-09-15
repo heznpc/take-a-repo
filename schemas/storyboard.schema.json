@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:starter-series:shotkit:schema:storyboard:v1",
-  "title": "shotkit storyboard handoff",
+  "$id": "urn:starter-series:take-a-repo:schema:storyboard:v1",
+  "title": "take-a-repo storyboard handoff",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -15,8 +15,8 @@
     "storyboardLint"
   ],
   "properties": {
-    "$schema": { "const": "urn:starter-series:shotkit:schema:storyboard:v1" },
-    "kind": { "const": "shotkit.storyboard" },
+    "$schema": { "const": "urn:starter-series:take-a-repo:schema:storyboard:v1" },
+    "kind": { "const": "take-a-repo.storyboard" },
     "version": { "const": 1 },
     "generatedAt": { "type": "string", "format": "date-time" },
     "project": { "type": "object", "additionalProperties": true },

@@ -1,16 +1,16 @@
-# skillBridge shotkit application plan
+# skillBridge take-a-repo application plan
 
-Do not edit skillBridge from the shotkit repo. This is the intended follow-up
-plan once `shotkit.3.0` is published or linked locally.
+Do not edit skillBridge from the take-a-repo repo. This is the intended follow-up
+plan once `take-a-repo.3.0` is published or linked locally.
 
 ## Goal
 
-Upgrade the existing skillBridge shotkit setup from store screenshots plus one
+Upgrade the existing skillBridge take-a-repo setup from store screenshots plus one
 functional demo into a repeatable launch/handoff bundle:
 
 - Keep Chrome Web Store screenshots and promo tiles.
 - Split SNS videos into multiple `demos[]` campaign cuts.
-- Emit `storyboard.json`, `captions.json`, and `shotkit-manifest.json`.
+- Emit `storyboard.json`, `captions.json`, and `take-a-repo-manifest.json`.
 
 ## Suggested demo cuts
 
@@ -92,19 +92,19 @@ demos: [
 Run from skillBridge:
 
 ```bash
-HEADED=0 npx shotkit --scene demo-translate --mp4 --json
-HEADED=0 npx shotkit --scene demo-protected-terms --mp4 --json
+TAKE_A_REPO_HEADED=0 npx take-a-repo --scene demo-translate --mp4 --json
+TAKE_A_REPO_HEADED=0 npx take-a-repo --scene demo-protected-terms --mp4 --json
 ```
 
 Check:
 
-- `shotkit-manifest.json` lists the mp4/webm/thumbnail/captions.
+- `take-a-repo-manifest.json` lists the mp4/webm/thumbnail/captions.
 - `storyboard.json` has no unexpected lint warnings.
 - Thumbnail frame shows a visible product result, not an empty loading state.
 - Generated mp4 is `1280×720`.
 
 ## Release ordering
 
-Do this after shotkit `1.3.0` is published and consumed by skillBridge. Do not
+Do this after take-a-repo `1.3.0` is published and consumed by skillBridge. Do not
 treat the handoff bundle as CWS deployment readiness by itself; skillBridge
 release checks still need their existing live-store and bundle verification.

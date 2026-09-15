@@ -27,9 +27,9 @@ function demoDisclaimer(config, demoConfig) {
 
 function installDisclaimer(text) {
   const add = () => {
-    if (document.getElementById('__shotkit_badge__') || !document.body) return;
+    if (document.getElementById('__take-a-repo_badge__') || !document.body) return;
     const badge = document.createElement('div');
-    badge.id = '__shotkit_badge__';
+    badge.id = '__take-a-repo_badge__';
     badge.textContent = text;
     badge.style.cssText = 'position:fixed;top:10px;left:10px;z-index:2147483647;background:rgba(20,21,26,.86);color:#fff;font:600 11px -apple-system,Segoe UI,Roboto,sans-serif;padding:5px 9px;border-radius:6px;pointer-events:none';
     document.body.appendChild(badge);
@@ -54,7 +54,7 @@ async function captureDemo({
   const preparedTypography = await prepareCaptionTypography(
     demoConfig.captionOptions || {},
     cwd,
-    (demoConfig.captions || []).map((caption) => caption.text),
+    [...(demoConfig.captions || []).map((caption) => caption.text), ...(demoConfig.captionTexts || [])],
   );
   await installDemoCaptionOverlay(demoCtx.context, preparedTypography.runtimeOptions);
 
@@ -72,8 +72,8 @@ async function captureDemo({
   await resources.page.setViewportSize(viewport);
   if (preparedTypography.report.enabled) {
     await resources.page.evaluate(async () => {
-      if (window.__shotkitDemoCaption && typeof window.__shotkitDemoCaption.ready === 'function') {
-        await window.__shotkitDemoCaption.ready();
+      if (window.__takeARepoDemoCaption && typeof window.__takeARepoDemoCaption.ready === 'function') {
+        await window.__takeARepoDemoCaption.ready();
       }
     });
   }

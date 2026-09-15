@@ -115,7 +115,7 @@ describe('user approval gate', () => {
   });
 
   test('atomically writes and reloads user feedback', () => {
-    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-approval-'));
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-approval-'));
     try {
       updateApprovalDecision(outDir, 'demo', 'youtube-shorts', {
         status: 'changes-requested',
@@ -133,7 +133,7 @@ describe('user approval gate', () => {
   });
 
   test('rejects reserved decision keys', () => {
-    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-approval-'));
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-approval-'));
     try {
       expect(() => updateApprovalDecision(outDir, '__proto__', 'youtube-shorts', {
         status: 'approved',
@@ -145,8 +145,8 @@ describe('user approval gate', () => {
   });
 
   test('validates a multi-target decision batch before writing it once', () => {
-    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-approval-'));
-    const filePath = path.join(outDir, 'shotkit-approval.json');
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-approval-'));
+    const filePath = path.join(outDir, 'take-a-repo-approval.json');
     try {
       expect(() => updateApprovalDecisions(outDir, [
         { story: 'demo', target: 'x', decision: { status: 'approved', assetDigest: DIGEST } },

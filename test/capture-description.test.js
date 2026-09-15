@@ -52,8 +52,8 @@ function writeProductManifest(cwd) {
 }
 
 test('capture writes listing and privacy worksheet from product manifest', async () => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-capture-product-'));
-  const prepareExtension = jest.fn(async () => fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-extension-')));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-capture-product-'));
+  const prepareExtension = jest.fn(async () => fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-extension-')));
   writeProductManifest(cwd);
 
   const result = await capture({
@@ -69,7 +69,7 @@ test('capture writes listing and privacy worksheet from product manifest', async
 
   const descriptionPath = path.join(cwd, 'store-assets', 'description.md');
   const privacyPath = path.join(cwd, 'store-assets', 'privacy-disclosure.md');
-  const manifestPath = path.join(cwd, 'store-assets', 'shotkit-manifest.json');
+  const manifestPath = path.join(cwd, 'store-assets', 'take-a-repo-manifest.json');
 
   expect(result.produced).toContain(descriptionPath);
   expect(result.produced).toContain(privacyPath);
@@ -85,7 +85,7 @@ test('capture writes listing and privacy worksheet from product manifest', async
 });
 
 test('description-only scene does not run build, prepareExtension, or Chromium', async () => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-capture-description-only-'));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-capture-description-only-'));
   const prepareExtension = jest.fn(() => {
     throw new Error('prepareExtension should not run');
   });
@@ -107,8 +107,8 @@ test('description-only scene does not run build, prepareExtension, or Chromium',
     'description.md',
     'storyboard.json',
     'captions.json',
-    'shotkit-manifest.json',
-    'shotkit-manifest.schema.json',
+    'take-a-repo-manifest.json',
+    'take-a-repo-manifest.schema.json',
     'storyboard.schema.json',
     'captions.schema.json',
     'approval.schema.json',
@@ -118,8 +118,8 @@ test('description-only scene does not run build, prepareExtension, or Chromium',
 });
 
 test('capture does not delete caller-owned extension directories', async () => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-capture-owned-extension-'));
-  const extensionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-extension-'));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-capture-owned-extension-'));
+  const extensionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-extension-'));
 
   await capture({
     outDir: 'store-assets',
@@ -136,7 +136,7 @@ test('capture does not delete caller-owned extension directories', async () => {
 });
 
 test('a filtered text recapture retains untouched handoff assets from the full run', async () => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-capture-partial-text-'));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-capture-partial-text-'));
   writeProductManifest(cwd);
   const config = {
     outDir: 'store-assets',

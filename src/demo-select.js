@@ -9,8 +9,8 @@ const DEFAULT_SELECT_BEFORE_MS = 120;
 const DEFAULT_SELECT_MAX_OPTIONS = 7;
 
 function demoSelectInitScript() {
-  const rootId = '__shotkit_demo_select__';
-  const styleId = '__shotkit_demo_select_style__';
+  const rootId = '__take-a-repo_demo_select__';
+  const styleId = '__take-a-repo_demo_select_style__';
 
   function ensureStyle() {
     if (document.getElementById(styleId)) return;
@@ -40,7 +40,7 @@ function demoSelectInitScript() {
         opacity: 1;
         transform: translateY(0);
       }
-      #${rootId} .shotkit-select-row {
+      #${rootId} .take-a-repo-select-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -49,16 +49,16 @@ function demoSelectInitScript() {
         border-radius: 4px;
         white-space: nowrap;
       }
-      #${rootId} .shotkit-select-row[data-pending="true"] {
+      #${rootId} .take-a-repo-select-row[data-pending="true"] {
         background: #eff6ff;
         box-shadow: inset 3px 0 #2563eb;
         color: #1d4ed8;
       }
-      #${rootId} .shotkit-select-row[data-selected="true"] {
+      #${rootId} .take-a-repo-select-row[data-selected="true"] {
         background: #2563eb;
         color: #fff;
       }
-      #${rootId} .shotkit-select-marker {
+      #${rootId} .take-a-repo-select-marker {
         width: 8px;
         height: 8px;
         margin-left: 14px;
@@ -66,11 +66,11 @@ function demoSelectInitScript() {
         border-radius: 999px;
         opacity: 0;
       }
-      #${rootId} .shotkit-select-row[data-selected="true"] .shotkit-select-marker,
-      #${rootId} .shotkit-select-row[data-pending="true"] .shotkit-select-marker {
+      #${rootId} .take-a-repo-select-row[data-selected="true"] .take-a-repo-select-marker,
+      #${rootId} .take-a-repo-select-row[data-pending="true"] .take-a-repo-select-marker {
         opacity: 1;
       }
-      #${rootId} .shotkit-select-gap {
+      #${rootId} .take-a-repo-select-gap {
         height: 10px;
         color: #94a3b8;
         font: 700 12px/10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -112,20 +112,20 @@ function demoSelectInitScript() {
     for (const item of model.items) {
       if (item.gap) {
         const gap = document.createElement('div');
-        gap.className = 'shotkit-select-gap';
+        gap.className = 'take-a-repo-select-gap';
         gap.textContent = '...';
         root.appendChild(gap);
         continue;
       }
       const row = document.createElement('div');
-      row.className = 'shotkit-select-row';
+      row.className = 'take-a-repo-select-row';
       row.dataset.value = item.value;
       row.dataset.selected = item.value === model.currentValue ? 'true' : 'false';
       row.dataset.pending = item.value === model.targetValue && item.value !== model.currentValue ? 'true' : 'false';
       const label = document.createElement('b');
       label.textContent = item.label;
       const marker = document.createElement('i');
-      marker.className = 'shotkit-select-marker';
+      marker.className = 'take-a-repo-select-marker';
       row.append(label, marker);
       root.appendChild(row);
     }
@@ -135,7 +135,7 @@ function demoSelectInitScript() {
   function commit(value) {
     const root = ensureRoot();
     if (!root) return;
-    for (const row of root.querySelectorAll('.shotkit-select-row')) {
+    for (const row of root.querySelectorAll('.take-a-repo-select-row')) {
       row.dataset.selected = row.dataset.value === value ? 'true' : 'false';
       row.dataset.pending = 'false';
     }
@@ -150,7 +150,7 @@ function demoSelectInitScript() {
     }, 180);
   }
 
-  window.__shotkitDemoSelect = { show, commit, hide };
+  window.__takeARepoDemoSelect = { show, commit, hide };
 }
 
 async function installDemoSelectOverlay(context) {
@@ -167,7 +167,7 @@ function selectLocator(page, target) {
     : target;
   if (!locator || typeof locator.evaluate !== 'function'
     || typeof locator.focus !== 'function' || typeof locator.selectOption !== 'function') {
-    throw new Error('shotkit: demo.select target must be a selector string or Locator for a select element');
+    throw new Error('take-a-repo: demo.select target must be a selector string or Locator for a select element');
   }
   return locator;
 }
@@ -175,7 +175,7 @@ function selectLocator(page, target) {
 async function readDemoSelectModel(locator, value, maxOptions) {
   return locator.evaluate((element, input) => {
     if (!element || element.tagName !== 'SELECT') {
-      throw new Error('shotkit: demo.select target must resolve to a select element');
+      throw new Error('take-a-repo: demo.select target must resolve to a select element');
     }
     const options = Array.from(element.options).map((option, index) => ({
       index,
@@ -184,7 +184,7 @@ async function readDemoSelectModel(locator, value, maxOptions) {
     }));
     const targetIndex = options.findIndex((option) => option.value === input.value);
     if (targetIndex < 0) {
-      throw new Error(`shotkit: demo.select option "${input.value}" was not found`);
+      throw new Error(`take-a-repo: demo.select option "${input.value}" was not found`);
     }
 
     const selectedIndex = element.selectedIndex;
@@ -229,25 +229,25 @@ async function readDemoSelectModel(locator, value, maxOptions) {
 async function showDemoSelect(page, model) {
   await ensureDemoSelectOverlay(page);
   await page.evaluate(({ selectModel }) => {
-    window.__shotkitDemoSelect.show(selectModel);
+    window.__takeARepoDemoSelect.show(selectModel);
   }, { selectModel: model });
 }
 
 async function commitDemoSelect(page, value) {
   await page.evaluate(({ selectedValue }) => {
-    if (window.__shotkitDemoSelect) window.__shotkitDemoSelect.commit(selectedValue);
+    if (window.__takeARepoDemoSelect) window.__takeARepoDemoSelect.commit(selectedValue);
   }, { selectedValue: value });
 }
 
 async function hideDemoSelect(page) {
   await page.evaluate(() => {
-    if (window.__shotkitDemoSelect) window.__shotkitDemoSelect.hide();
+    if (window.__takeARepoDemoSelect) window.__takeARepoDemoSelect.hide();
   });
 }
 
 async function performDemoSelect({ page, target, value, options = {}, targetCenter, movePointer, pulsePointer }) {
   if (typeof value !== 'string' || !value) {
-    throw new Error('shotkit: demo.select value must be a non-empty option value string');
+    throw new Error('take-a-repo: demo.select value must be a non-empty option value string');
   }
   const {
     openMs = DEFAULT_SELECT_OPEN_MS,
@@ -258,7 +258,7 @@ async function performDemoSelect({ page, target, value, options = {}, targetCent
     highlight = true,
   } = options;
   if (!Number.isInteger(maxOptions) || maxOptions < 2 || maxOptions > 9) {
-    throw new Error('shotkit: demo.select maxOptions must be an integer between 2 and 9');
+    throw new Error('take-a-repo: demo.select maxOptions must be an integer between 2 and 9');
   }
   const normalizedOpenMs = normalizeDelayMs(openMs, 'select openMs');
   const normalizedHoldMs = normalizeDelayMs(holdMs, 'select holdMs');

@@ -10,7 +10,7 @@ function renderDescriptionDoc(listing) {
   return [
     '# Store listing — copy/paste fields',
     '',
-    `> Generated from ${listing.source || 'STORE_LISTING.md'} by shotkit. Edit the`,
+    `> Generated from ${listing.source || 'STORE_LISTING.md'} by take-a-repo. Edit the`,
     '> source file, not this file.',
     '',
     block('Title', listing.title),
@@ -40,7 +40,7 @@ function renderPrivacyDisclosureDoc(privacy) {
   return [
     '# Privacy disclosure worksheet',
     '',
-    '> Generated from product.manifest.json by shotkit. This is a review',
+    '> Generated from product.manifest.json by take-a-repo. This is a review',
     '> worksheet for store disclosures and README permission tables, not a',
     '> privacy policy or legal text.',
     '',

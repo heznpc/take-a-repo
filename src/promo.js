@@ -32,7 +32,7 @@ async function renderPromoTile({ context, template, width, height, replacements 
 
     if (replacements && Object.keys(replacements).length) {
       // Trusted, build-time content only: the template and replacements are
-      // repo-committed config (store.config.js), never user input, rendered in
+      // repo-committed config (take-a-repo.config.js), never user input, rendered in
       // a throwaway page that is screenshotted and closed. The innerHTML
       // round-trip is what re-resolves relative <img> paths against the file://
       // base after substitution.

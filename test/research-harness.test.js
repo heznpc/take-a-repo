@@ -15,7 +15,7 @@ function runResearch(args) {
 
 describe('research-to-product-fit CLI', () => {
   test('accepts a real override date', () => {
-    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-research-test-'));
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-research-test-'));
     const result = runResearch([
       '--topic',
       'date validation smoke',

@@ -35,7 +35,7 @@ function decisionFor(body, target) {
 function validateCampaignReview({ body, recipes, current }) {
   validateReviewDecision(body);
   const recipe = recipes.find((item) => item.id === body.recipeId);
-  if (!recipe) throw new ReviewRequestError(400, 'shotkit: campaign recipe was not found');
+  if (!recipe) throw new ReviewRequestError(400, 'take-a-repo: campaign recipe was not found');
   if (!Array.isArray(body.candidates) || !body.candidates.length) {
     throw new ReviewRequestError(400, 'review candidates must be a non-empty array');
   }

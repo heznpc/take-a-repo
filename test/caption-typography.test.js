@@ -53,7 +53,7 @@ describe('caption typography', () => {
   });
 
   test('embeds project-local fonts and reports missing glyphs before capture', async () => {
-    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-font-'));
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-font-'));
     fs.mkdirSync(path.join(cwd, 'fonts'));
     fs.writeFileSync(path.join(cwd, 'fonts', 'caption.woff2'), Buffer.from('font'));
     fontkit.create.mockReturnValue({
@@ -97,8 +97,8 @@ describe('caption typography', () => {
   });
 
   test('rejects font paths outside the project', async () => {
-    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-font-root-'));
-    const outside = path.join(os.tmpdir(), `shotkit-outside-${Date.now()}.woff2`);
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-font-root-'));
+    const outside = path.join(os.tmpdir(), `take-a-repo-outside-${Date.now()}.woff2`);
     fs.writeFileSync(outside, 'font');
     try {
       await expect(prepareCaptionTypography({

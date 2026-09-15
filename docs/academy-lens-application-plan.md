@@ -1,7 +1,7 @@
-# AcademyLens shotkit application plan
+# AcademyLens take-a-repo application plan
 
-Do not edit AcademyLens from the shotkit repo. This is the intended follow-up
-plan once `shotkit.3.0` is published or linked locally.
+Do not edit AcademyLens from the take-a-repo repo. This is the intended follow-up
+plan once `take-a-repo.3.0` is published or linked locally.
 
 ## Goal
 
@@ -9,16 +9,16 @@ Create a repeatable demo starter pack for AcademyLens:
 
 - Chrome Web Store screenshots and listing copy.
 - X/SNS source demo clips.
-- `storyboard.json`, `captions.json`, and `shotkit-manifest.json` for handoff to
+- `storyboard.json`, `captions.json`, and `take-a-repo-manifest.json` for handoff to
   Screen Studio, Canva, Supademo, or future MCP adapters.
 
 ## Config shape
 
-Add `shotkit.config.js` in AcademyLens:
+Add `take-a-repo.config.js` in AcademyLens:
 
 ```js
 const path = require('path');
-const { serveDirectory, stageExtension, patchManifestForLocalhost } = require('shotkit');
+const { serveDirectory, stageExtension, patchManifestForLocalhost } = require('take-a-repo');
 
 const FIXTURES = path.join(__dirname, 'tests', 'fixtures');
 
@@ -95,9 +95,9 @@ module.exports = {
 Run from AcademyLens:
 
 ```bash
-npm i -D shotkit
+npm i -D take-a-repo
 npx playwright install chromium
-HEADED=0 npx shotkit --scene demo-translate --mp4 --json
+TAKE_A_REPO_HEADED=0 npx take-a-repo --scene demo-translate --mp4 --json
 ```
 
 Expected handoff outputs:
@@ -107,4 +107,4 @@ Expected handoff outputs:
 - `store-assets/demo-translate-thumbnail.png`
 - `store-assets/storyboard.json`
 - `store-assets/captions.json`
-- `store-assets/shotkit-manifest.json`
+- `store-assets/take-a-repo-manifest.json`

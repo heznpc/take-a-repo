@@ -1,13 +1,13 @@
 /*
- * shotkit — public API.
+ * take-a-repo — public API.
  *
- * shotkit turns a BUILT browser extension (or any HTML) into automatically
+ * take-a-repo turns a BUILT browser extension (or any HTML) into automatically
  * validated channel assets. Playwright captures reusable stories; channel
  * profiles, final-file QA, and agent-owned retry actions drive them to a
  * technically verified candidate; an explicit user decision gates publication.
  *
  * Config authors typically use `capture` indirectly (via the CLI) and import
- * the helpers below inside their `shotkit.config.js` to set up scenes:
+ * the helpers below inside their `take-a-repo.config.js` to set up scenes:
  *   - serveDirectory          — tiny localhost fixture server (path-traversal safe)
  *   - stageExtension          — copy an extension's files to a temp dir
  *   - patchManifestForLocalhost — widen a manifest so content scripts hit localhost
@@ -71,6 +71,9 @@ const {
 } = require('./demo');
 
 module.exports = {
+  ...require('./evidence-export'),
+  fingerprintInputs: require('./evidence-inputs').fingerprintInputs,
+  evidenceState: require('./evidence-state').evidenceState,
   capture,
   DEFAULT_VIEWPORT,
   // zero-config demo

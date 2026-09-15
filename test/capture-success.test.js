@@ -58,8 +58,8 @@ beforeEach(() => {
 });
 
 test('successful demo capture preserves the recording and cleanup order', async () => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-capture-success-'));
-  const extensionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-extension-'));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-capture-success-'));
+  const extensionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-extension-'));
   const demoRun = jest.fn(async () => {});
 
   const result = await capture({

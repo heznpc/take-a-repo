@@ -14,16 +14,16 @@ const { normalizeTypographyOptions, typographyStyle } = require('./caption-typog
 function captionOptionObject(options) {
   if (options == null) return {};
   if (typeof options !== 'object' || Array.isArray(options)) {
-    throw new Error('shotkit: demo captionOptions must be an object');
+    throw new Error('take-a-repo: demo captionOptions must be an object');
   }
   if (options.position != null && !CAPTION_POSITIONS.has(options.position)) {
-    throw new Error('shotkit: demo captionOptions.position must be "bottom-left" or "bottom"');
+    throw new Error('take-a-repo: demo captionOptions.position must be "bottom-left" or "bottom"');
   }
   if (options.bottomOffset != null && (!Number.isFinite(options.bottomOffset) || options.bottomOffset < 0)) {
-    throw new Error('shotkit: demo captionOptions.bottomOffset must be a non-negative number');
+    throw new Error('take-a-repo: demo captionOptions.bottomOffset must be a non-negative number');
   }
   if (options.appearance != null && options.appearance !== 'panel' && options.appearance !== 'outline') {
-    throw new Error('shotkit: demo captionOptions.appearance must be "panel" or "outline"');
+    throw new Error('take-a-repo: demo captionOptions.appearance must be "panel" or "outline"');
   }
   normalizeTypographyOptions(options);
   return options;
@@ -33,7 +33,7 @@ function captionMode(options = {}) {
   options = captionOptionObject(options);
   const mode = options.mode == null ? 'static' : options.mode;
   if (mode !== 'static' && mode !== 'focus') {
-    throw new Error('shotkit: demo captionOptions.mode must be "static" or "focus"');
+    throw new Error('take-a-repo: demo captionOptions.mode must be "static" or "focus"');
   }
   return mode;
 }
@@ -41,7 +41,7 @@ function captionMode(options = {}) {
 function boundedInteger(value, fallback, name, min, max) {
   const resolved = value == null ? fallback : value;
   if (!Number.isInteger(resolved) || resolved < min || resolved > max) {
-    throw new Error(`shotkit: demo captionOptions.${name} must be an integer between ${min} and ${max}`);
+    throw new Error(`take-a-repo: demo captionOptions.${name} must be an integer between ${min} and ${max}`);
   }
   return resolved;
 }
@@ -53,7 +53,7 @@ function normalizeFocusOptions(options = {}) {
 
   const activeColor = options.activeColor == null ? DEFAULT_FOCUS_ACTIVE_COLOR : options.activeColor;
   if (typeof activeColor !== 'string' || !activeColor.trim()) {
-    throw new Error('shotkit: demo captionOptions.activeColor must be a non-empty CSS color');
+    throw new Error('take-a-repo: demo captionOptions.activeColor must be a non-empty CSS color');
   }
 
   return {

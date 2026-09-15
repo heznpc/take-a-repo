@@ -1,6 +1,6 @@
-# shotkit Handoff Conventions
+# take-a-repo Handoff Conventions
 
-shotkit is the autonomous launch asset pipeline for browser extensions. It
+take-a-repo is the autonomous launch asset pipeline for browser extensions. It
 turns a reusable product story into channel variants, validates the final files,
 and gives agents machine-readable fixes until the requested targets are
 technically publish-ready. The handoff pack is an internal machine boundary, not a request
@@ -11,23 +11,23 @@ candidate and records Approve or Request changes; agents own the repair loop.
 
 Every successful run writes these files unless `handoff: false` is set:
 
-- `shotkit-manifest.json` — the entry point. Read this first.
+- `take-a-repo-manifest.json` — the entry point. Read this first.
 - `storyboard.json` — demo intent, beats, viewport, trim/framing hints, and
   structured storyboard lint.
 - `captions.json` — portable caption timing, text, style, and measured rendering QA.
-- `schemas/shotkit-manifest.schema.json` — local manifest validation contract.
+- `schemas/take-a-repo-manifest.schema.json` — local manifest validation contract.
 - `schemas/storyboard.schema.json` — local storyboard validation contract.
 - `schemas/captions.schema.json` — local captions validation contract.
 - `schemas/approval.schema.json` — user decision validation contract.
 
-The first review decision also writes `shotkit-approval.json`. It is separate
+The first review decision also writes `take-a-repo-approval.json`. It is separate
 from generated evidence and binds the decision to the exact deliverable digest.
 
 Schema references are included in each file as `$schema` URNs, and the package
 ships matching schema files under `schemas/`. Each output pack also carries its
 own copies; resolve `handoff.schemaFiles` relative to the directory containing
-`shotkit-manifest.json`. The URN is an identity key, not a network fetch
-requirement. shotkit validates the finalized core handoff documents with these
+`take-a-repo-manifest.json`. The URN is an identity key, not a network fetch
+requirement. take-a-repo validates the finalized core handoff documents with these
 same schemas before writing the manifest and validates approval decisions when
 they are read or written.
 
@@ -49,7 +49,7 @@ External tools should use `assets[].role`, not filename guessing:
 - `thumbnail` — poster frame extracted from the final clip.
 - `storyboard-contract` — `storyboard.json`.
 - `captions-contract` — `captions.json`.
-- `handoff-manifest` — `shotkit-manifest.json`.
+- `handoff-manifest` — `take-a-repo-manifest.json`.
 - `handoff-schema` — one of the locally bundled JSON schemas.
 
 Each asset has a stable `id`, repo-relative `path`, `outPath`, `type`, `format`,
@@ -126,7 +126,7 @@ the exhausted `blocked` state sets technical
 
 Machine `publish-ready` means these automated checks passed. It does not mean
 the user approved the media. `handoff.approval.targets[]` compares the current
-deliverable SHA-256 and calibration profile hash with `shotkit-approval.json`:
+deliverable SHA-256 and calibration profile hash with `take-a-repo-approval.json`:
 
 - `awaiting-approval` — show the final candidate to the user.
 - `changes-requested` — the agent owns the note, edit, and recapture.
@@ -145,7 +145,7 @@ not mean the connector is installed or the user approved the assets.
 
 Target workflows omit `adapterHints[]` by default. They are available for
 legacy targetless captures or when `automation.manualFallback:true` is
-explicitly configured. Hints are advisory; shotkit does not hold credentials or
+explicitly configured. Hints are advisory; take-a-repo does not hold credentials or
 install MCP servers.
 
 Each hint includes:
@@ -247,7 +247,7 @@ Current warning codes:
 - `caption-timing-drift`
 
 Lint warnings do not fail a capture. They tell the agent how to improve the next
-`shotkit.config.js` edit.
+`take-a-repo.config.js` edit.
 
 ## Versioning
 
@@ -256,11 +256,11 @@ The handoff contract is versioned independently from the npm package:
 - Top-level `version: 1` means handoff contract v1.
 - Top-level `kind` identifies the document type.
 - `$schema` points at the matching schema URN.
-- Approval decisions use `kind: "shotkit.approval"` and are tied to an asset
+- Approval decisions use `kind: "take-a-repo.approval"` and are tied to an asset
   digest, not a mutable filename.
 - New fields may be added in v1. Existing fields should keep their meaning.
 
 Downstream tools should ignore unknown fields and key off `kind`, `version`, and
 `assets[].role`. For validation, prefer the schemas copied into the handoff
-pack. The same files remain available through the installed `shotkit` package's
+pack. The same files remain available through the installed `take-a-repo` package's
 `./schemas/*` export; never fetch the URN as a URL.

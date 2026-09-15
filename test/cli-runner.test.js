@@ -13,12 +13,22 @@ function streamBuffer() {
 
 function tmpProject() {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-cli-runner-'));
-  const configPath = path.join(cwd, 'shotkit.config.js');
+  const configPath = path.join(cwd, 'take-a-repo.config.js');
   fs.writeFileSync(configPath, 'module.exports = {};');
   return { cwd, configPath };
 }
 
 describe('runCli', () => {
+  test('unwraps a default-exported config and preserves evidence failure exit status', async () => {
+    const { cwd } = tmpProject();
+    const stdout = streamBuffer();
+    const config = { evidence: { version: 1 } };
+    const capture = jest.fn(async () => ({ produced: [], outDir: cwd, machineStatus: 'needs-fix', status: 'needs-fix', exitCode: 1 }));
+    const code = await runCli(['--json'], { processCwd: () => cwd, stdout: stdout.stream }, { capture, loadConfig: () => ({ default: config }) });
+    expect(capture).toHaveBeenCalledWith(config, expect.any(Object));
+    expect(code).toBe(1);
+    expect(JSON.parse(stdout.read())).toMatchObject({ ok: false, machineStatus: 'needs-fix' });
+  });
   test('json success writes exactly one parseable stdout object and routes progress to stderr', async () => {
     const { cwd, configPath } = tmpProject();
     const stdout = streamBuffer();
@@ -27,7 +37,7 @@ describe('runCli', () => {
       opts.log('capturing');
       return {
         outDir: path.join(cwd, 'store-assets'),
-        manifest: path.join(cwd, 'store-assets', 'shotkit-manifest.json'),
+        manifest: path.join(cwd, 'store-assets', 'take-a-repo-manifest.json'),
         status: 'awaiting-approval',
         machineStatus: 'publish-ready',
         produced: [path.join(cwd, 'store-assets', 'a.png')],
@@ -49,10 +59,10 @@ describe('runCli', () => {
       status: 'awaiting-approval',
       machineStatus: 'publish-ready',
       outDir: path.join(cwd, 'store-assets'),
-      manifest: path.join(cwd, 'store-assets', 'shotkit-manifest.json'),
+      manifest: path.join(cwd, 'store-assets', 'take-a-repo-manifest.json'),
       produced: [path.join(cwd, 'store-assets', 'a.png')],
     });
-    expect(stderr.read()).toContain('[shotkit] capturing');
+    expect(stderr.read()).toContain('[take-a-repo] capturing');
     expect(capture).toHaveBeenCalledWith(expect.objectContaining({ loadedFrom: configPath }), expect.objectContaining({ cwd, json: true }));
   });
 
@@ -83,7 +93,7 @@ describe('runCli', () => {
     const stderr = streamBuffer();
     const capture = jest.fn();
     const startCalibrator = jest.fn(async () => ({ url: 'http://127.0.0.1:4312' }));
-    const config = { calibration: { from: 'shotkit.calibration.json' } };
+    const config = { calibration: { from: 'take-a-repo.calibration.json' } };
 
     const code = await runCli(['--calibrate', '--port', '4312', '--no-open', '--json'], {
       stdout: stdout.stream,
@@ -120,7 +130,7 @@ describe('runCli', () => {
       url: 'http://127.0.0.1:4312',
       campaignUrl: 'http://127.0.0.1:4312/campaign/',
     }));
-    const config = { calibration: { from: 'shotkit.calibration.json' } };
+    const config = { calibration: { from: 'take-a-repo.calibration.json' } };
 
     const code = await runCli(['--campaign', '--port', '4312', '--no-open', '--json'], {
       stdout: stdout.stream,

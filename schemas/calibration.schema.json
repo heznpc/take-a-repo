@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:starter-series:shotkit:schema:calibration:v1",
-  "title": "shotkit calibration profile",
+  "$id": "urn:starter-series:take-a-repo:schema:calibration:v1",
+  "title": "take-a-repo calibration profile",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "profiles"],

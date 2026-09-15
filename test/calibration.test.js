@@ -11,7 +11,7 @@ const {
 } = require('../src/calibration');
 
 function cwd() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-calibration-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-calibration-'));
 }
 
 function profile(overrides = {}) {
@@ -27,8 +27,8 @@ function profile(overrides = {}) {
 describe('calibration contract', () => {
   test('loads a missing declared file as an empty v1 document', () => {
     const root = cwd();
-    expect(loadCalibration({ calibration: { from: 'shotkit.calibration.json' } }, root)).toEqual({
-      path: path.join(root, 'shotkit.calibration.json'),
+    expect(loadCalibration({ calibration: { from: 'take-a-repo.calibration.json' } }, root)).toEqual({
+      path: path.join(root, 'take-a-repo.calibration.json'),
       layouts: [],
       document: { version: 1, profiles: {} },
     });
@@ -36,11 +36,11 @@ describe('calibration contract', () => {
 
   test('atomically writes and reloads a normalized profile', () => {
     const root = cwd();
-    const config = { calibration: { from: 'config/shotkit.calibration.json', layouts: ['focus-column'] } };
+    const config = { calibration: { from: 'config/take-a-repo.calibration.json', layouts: ['focus-column'] } };
     const updated = updateCalibrationProfile(config, root, 'demo', 'youtube-shorts', profile());
 
     expect(updated.profile.protectedRegions).toHaveLength(1);
-    expect(fs.existsSync(path.join(root, 'config', 'shotkit.calibration.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'config', 'take-a-repo.calibration.json'))).toBe(true);
     expect(loadCalibration(config, root).document.profiles.demo['youtube-shorts']).toEqual(updated.profile);
   });
 
@@ -93,7 +93,7 @@ describe('calibration contract', () => {
 
   test('rejects undeclared layout presets and stale verification hashes', () => {
     const root = cwd();
-    const config = { calibration: { from: 'shotkit.calibration.json', layouts: ['focus-column'] } };
+    const config = { calibration: { from: 'take-a-repo.calibration.json', layouts: ['focus-column'] } };
     expect(() => updateCalibrationProfile(
       config,
       root,

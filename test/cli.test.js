@@ -4,7 +4,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { parseArgs, resolveConfigPath, USAGE } = require('../src/cli');
 
-const BIN = path.resolve(__dirname, '..', 'bin', 'shotkit.js');
+const BIN = path.resolve(__dirname, '..', 'bin', 'take-a-repo.js');
 
 describe('parseArgs', () => {
   test('defaults', () => {
@@ -94,7 +94,7 @@ describe('parseArgs', () => {
   });
 });
 
-describe('shotkit CLI usage errors', () => {
+describe('take-a-repo CLI usage errors', () => {
   function run(args) {
     return spawnSync(process.execPath, [BIN, ...args], {
       cwd: os.tmpdir(),
@@ -108,7 +108,7 @@ describe('shotkit CLI usage errors', () => {
     expect(res.status).toBe(2);
     expect(res.stdout).toBe('');
     expect(res.stderr).toContain('unknown option: --no-buid');
-    expect(res.stderr).toContain('Usage: shotkit');
+    expect(res.stderr).toContain('Usage: take-a-repo');
   });
 
   test('missing option values fail with usage code 2', () => {
@@ -117,7 +117,7 @@ describe('shotkit CLI usage errors', () => {
     expect(res.status).toBe(2);
     expect(res.stdout).toBe('');
     expect(res.stderr).toContain('--scene requires a scene name');
-    expect(res.stderr).toContain('Usage: shotkit');
+    expect(res.stderr).toContain('Usage: take-a-repo');
   });
 
   test('--json usage errors write one JSON object to stdout', () => {
@@ -134,7 +134,7 @@ describe('shotkit CLI usage errors', () => {
 
   test('--json unknown scenes fail with usage code 2 before capture work', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-cli-scene-'));
-    fs.writeFileSync(path.join(dir, 'shotkit.config.js'), `
+    fs.writeFileSync(path.join(dir, 'take-a-repo.config.js'), `
 module.exports = {
   prepareExtension() { throw new Error('prepareExtension should not run'); },
   scenes: [{ name: 'known-scene', run: async () => {} }],
@@ -156,13 +156,13 @@ module.exports = {
 });
 
 describe('resolveConfigPath', () => {
-  test('prefers shotkit.config.js, falls back to store.config.js, else null', () => {
+  test('uses only take-a-repo.config.js by default', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-cli-'));
     expect(resolveConfigPath(null, dir)).toBeNull();
     fs.writeFileSync(path.join(dir, 'store.config.js'), 'module.exports={}');
-    expect(resolveConfigPath(null, dir)).toBe(path.join(dir, 'store.config.js'));
-    fs.writeFileSync(path.join(dir, 'shotkit.config.js'), 'module.exports={}');
-    expect(resolveConfigPath(null, dir)).toBe(path.join(dir, 'shotkit.config.js'));
+    expect(resolveConfigPath(null, dir)).toBeNull();
+    fs.writeFileSync(path.join(dir, 'take-a-repo.config.js'), 'module.exports={}');
+    expect(resolveConfigPath(null, dir)).toBe(path.join(dir, 'take-a-repo.config.js'));
   });
 
   test('explicit --config resolves against the target dir', () => {

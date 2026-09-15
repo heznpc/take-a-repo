@@ -96,7 +96,7 @@ function createCampaignStateReader({ cwd, config, outDir, state, getRun, recipes
 }
 
 function nextAttempt(outDir) {
-  const manifest = readJson(path.join(outDir, 'shotkit-manifest.json'), {});
+  const manifest = readJson(path.join(outDir, 'take-a-repo-manifest.json'), {});
   const currentAttempt = manifest.handoff && manifest.handoff.automation
     ? Number(manifest.handoff.automation.attempt) || 0
     : 0;
@@ -110,7 +110,7 @@ async function recaptureCampaign({ cwd, config, configPath, outDir, story, targe
     captureProfileSnapshot(config, cwd, story, target),
   ]));
   const result = await runner({ cwd, configPath, story, targets, attempt, noBuild: false });
-  const manifest = readJson(path.join(outDir, 'shotkit-manifest.json'), {});
+  const manifest = readJson(path.join(outDir, 'take-a-repo-manifest.json'), {});
   const automationTargets = manifest.handoff && manifest.handoff.automation
     ? manifest.handoff.automation.targets || []
     : [];
@@ -148,7 +148,7 @@ function createCampaignRunController({
   }
 
   function reset() {
-    if (run.status === 'running') throw new Error('shotkit: campaign capture is running');
+    if (run.status === 'running') throw new Error('take-a-repo: campaign capture is running');
     run = { id: null, status: 'idle', targets: [] };
   }
 

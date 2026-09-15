@@ -1,6 +1,6 @@
 ---
 name: research-to-product-fit
-description: Turn external research from GitHub trending, similar repos, blog posts, PM/marketing tools, and agent skills into evidence-backed product TODOs for starter-series projects, especially shotkit demo/store-asset automation. Use when asked to scout tools or patterns, compare research candidates, reduce missed research, evaluate adopt/adapt/reject decisions, or hand off work across role-separated scout, critic, and integrator prompts.
+description: Turn external research from GitHub trending, similar repos, blog posts, PM/marketing tools, and agent skills into evidence-backed product TODOs for starter-series projects, especially take-a-repo demo/store-asset automation. Use when asked to scout tools or patterns, compare research candidates, reduce missed research, evaluate adopt/adapt/reject decisions, or hand off work across role-separated scout, critic, and integrator prompts.
 ---
 
 # Research To Product Fit

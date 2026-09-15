@@ -36,7 +36,7 @@ describe('handoff integration recommendations', () => {
     });
   });
 
-  test('marks avatar video as needing extra inputs, not missing shotkit assets', () => {
+  test('marks avatar video as needing extra inputs, not missing take-a-repo assets', () => {
     const avatar = buildHandoffRecommendations({
       assets: [asset('storyboard-contract'), asset('captions-contract')],
     }).find((item) => item.id === 'longcat-video-avatar');

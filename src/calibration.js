@@ -14,20 +14,20 @@ function isObject(value) {
 }
 
 function nonEmptyString(value, name) {
-  if (typeof value !== 'string' || !value.trim()) throw new Error(`shotkit: ${name} must be a non-empty string`);
+  if (typeof value !== 'string' || !value.trim()) throw new Error(`take-a-repo: ${name} must be a non-empty string`);
   return value.trim();
 }
 
 function finiteNumber(value, name, { min = -Infinity, max = Infinity, exclusiveMin = false } = {}) {
   if (!Number.isFinite(value) || (exclusiveMin ? value <= min : value < min) || value > max) {
     const boundary = exclusiveMin ? `greater than ${min}` : `between ${min} and ${max}`;
-    throw new Error(`shotkit: ${name} must be a finite number ${boundary}`);
+    throw new Error(`take-a-repo: ${name} must be a finite number ${boundary}`);
   }
   return value;
 }
 
 function normalizeRegion(region, index) {
-  if (!isObject(region)) throw new Error(`shotkit: protectedRegions[${index}] must be an object`);
+  if (!isObject(region)) throw new Error(`take-a-repo: protectedRegions[${index}] must be an object`);
   const id = nonEmptyString(region.id, `protectedRegions[${index}].id`);
   const normalized = {
     id,
@@ -41,13 +41,13 @@ function normalizeRegion(region, index) {
 }
 
 function normalizeProfile(profile, name = 'calibration profile') {
-  if (!isObject(profile)) throw new Error(`shotkit: ${name} must be an object`);
+  if (!isObject(profile)) throw new Error(`take-a-repo: ${name} must be an object`);
   const unknown = Object.keys(profile).filter((key) => !PROFILE_KEYS.has(key));
-  if (unknown.length) throw new Error(`shotkit: ${name} has unknown field(s): ${unknown.join(', ')}`);
+  if (unknown.length) throw new Error(`take-a-repo: ${name} has unknown field(s): ${unknown.join(', ')}`);
   const normalized = {};
   if (profile.layoutPreset != null) normalized.layoutPreset = nonEmptyString(profile.layoutPreset, `${name}.layoutPreset`);
   if (profile.framing != null) {
-    if (!isObject(profile.framing)) throw new Error(`shotkit: ${name}.framing must be an object`);
+    if (!isObject(profile.framing)) throw new Error(`take-a-repo: ${name}.framing must be an object`);
     normalized.framing = {
       scale: finiteNumber(profile.framing.scale, `${name}.framing.scale`, { min: 1, max: 1.2 }),
       focusX: finiteNumber(profile.framing.focusX, `${name}.framing.focusX`, { min: 0, max: 1 }),
@@ -55,48 +55,48 @@ function normalizeProfile(profile, name = 'calibration profile') {
     };
   }
   if (profile.captionOptions != null) {
-    if (!isObject(profile.captionOptions)) throw new Error(`shotkit: ${name}.captionOptions must be an object`);
+    if (!isObject(profile.captionOptions)) throw new Error(`take-a-repo: ${name}.captionOptions must be an object`);
     const captionOptions = {};
     if (profile.captionOptions.position != null) {
       if (!['bottom-left', 'bottom'].includes(profile.captionOptions.position)) {
-        throw new Error(`shotkit: ${name}.captionOptions.position must be "bottom-left" or "bottom"`);
+        throw new Error(`take-a-repo: ${name}.captionOptions.position must be "bottom-left" or "bottom"`);
       }
       captionOptions.position = profile.captionOptions.position;
     }
     if (profile.captionOptions.appearance != null) {
       if (!['panel', 'outline'].includes(profile.captionOptions.appearance)) {
-        throw new Error(`shotkit: ${name}.captionOptions.appearance must be "panel" or "outline"`);
+        throw new Error(`take-a-repo: ${name}.captionOptions.appearance must be "panel" or "outline"`);
       }
       captionOptions.appearance = profile.captionOptions.appearance;
     }
     if (profile.captionOptions.bottomOffset != null) {
       if (!Number.isInteger(profile.captionOptions.bottomOffset) || profile.captionOptions.bottomOffset < 0) {
-        throw new Error(`shotkit: ${name}.captionOptions.bottomOffset must be a non-negative integer`);
+        throw new Error(`take-a-repo: ${name}.captionOptions.bottomOffset must be a non-negative integer`);
       }
       captionOptions.bottomOffset = profile.captionOptions.bottomOffset;
     }
     const unknownCaption = Object.keys(profile.captionOptions)
       .filter((key) => !['position', 'appearance', 'bottomOffset'].includes(key));
     if (unknownCaption.length) {
-      throw new Error(`shotkit: ${name}.captionOptions has unknown field(s): ${unknownCaption.join(', ')}`);
+      throw new Error(`take-a-repo: ${name}.captionOptions has unknown field(s): ${unknownCaption.join(', ')}`);
     }
     normalized.captionOptions = captionOptions;
   }
   const regions = profile.protectedRegions == null ? [] : profile.protectedRegions;
   if (!Array.isArray(regions) || regions.length > 3) {
-    throw new Error(`shotkit: ${name}.protectedRegions must be an array with at most 3 entries`);
+    throw new Error(`take-a-repo: ${name}.protectedRegions must be an array with at most 3 entries`);
   }
   normalized.protectedRegions = regions.map(normalizeRegion);
   const ids = normalized.protectedRegions.map((region) => region.id);
-  if (new Set(ids).size !== ids.length) throw new Error(`shotkit: ${name}.protectedRegions ids must be unique`);
+  if (new Set(ids).size !== ids.length) throw new Error(`take-a-repo: ${name}.protectedRegions ids must be unique`);
   if (profile.verification != null) {
-    if (!isObject(profile.verification)) throw new Error(`shotkit: ${name}.verification must be an object`);
+    if (!isObject(profile.verification)) throw new Error(`take-a-repo: ${name}.verification must be an object`);
     if (profile.verification.status !== 'publish-ready') {
-      throw new Error(`shotkit: ${name}.verification.status must be "publish-ready"`);
+      throw new Error(`take-a-repo: ${name}.verification.status must be "publish-ready"`);
     }
     const verifiedAt = nonEmptyString(profile.verification.verifiedAt, `${name}.verification.verifiedAt`);
     if (Number.isNaN(Date.parse(verifiedAt))) {
-      throw new Error(`shotkit: ${name}.verification.verifiedAt must be an ISO date-time`);
+      throw new Error(`take-a-repo: ${name}.verification.verifiedAt must be an ISO date-time`);
     }
     normalized.verification = {
       profileHash: nonEmptyString(profile.verification.profileHash, `${name}.verification.profileHash`),
@@ -109,7 +109,7 @@ function normalizeProfile(profile, name = 'calibration profile') {
 
 function assertVerification(profile, name) {
   if (profile.verification && profile.verification.profileHash !== calibrationProfileHash(profile)) {
-    throw new Error(`shotkit: ${name}.verification.profileHash does not match the current profile`);
+    throw new Error(`take-a-repo: ${name}.verification.profileHash does not match the current profile`);
   }
 }
 
@@ -119,7 +119,7 @@ function assertLayoutPresets(document, layouts) {
     for (const [target, profile] of Object.entries(targets)) {
       if (profile.layoutPreset && !layouts.includes(profile.layoutPreset)) {
         throw new Error(
-          `shotkit: calibration profiles.${story}.${target}.layoutPreset must be one of: ${layouts.join(', ')}`,
+          `take-a-repo: calibration profiles.${story}.${target}.layoutPreset must be one of: ${layouts.join(', ')}`,
         );
       }
     }
@@ -127,15 +127,15 @@ function assertLayoutPresets(document, layouts) {
 }
 
 function normalizeDocument(document) {
-  if (!isObject(document)) throw new Error('shotkit: calibration document must be an object');
+  if (!isObject(document)) throw new Error('take-a-repo: calibration document must be an object');
   if (document.version !== CALIBRATION_VERSION) {
-    throw new Error(`shotkit: calibration version must be ${CALIBRATION_VERSION}`);
+    throw new Error(`take-a-repo: calibration version must be ${CALIBRATION_VERSION}`);
   }
-  if (!isObject(document.profiles)) throw new Error('shotkit: calibration profiles must be an object');
+  if (!isObject(document.profiles)) throw new Error('take-a-repo: calibration profiles must be an object');
   const profiles = {};
   for (const [story, targets] of Object.entries(document.profiles)) {
     nonEmptyString(story, 'calibration story key');
-    if (!isObject(targets)) throw new Error(`shotkit: calibration profiles.${story} must be an object`);
+    if (!isObject(targets)) throw new Error(`take-a-repo: calibration profiles.${story} must be an object`);
     profiles[story] = {};
     for (const [target, profile] of Object.entries(targets)) {
       nonEmptyString(target, `calibration profiles.${story} target key`);
@@ -149,16 +149,16 @@ function normalizeDocument(document) {
 
 function calibrationSpec(config, cwd) {
   if (config.calibration == null || config.calibration === false) return { path: null, layouts: [] };
-  if (!isObject(config.calibration)) throw new Error('shotkit: config.calibration must be false or an object');
+  if (!isObject(config.calibration)) throw new Error('take-a-repo: config.calibration must be false or an object');
   const from = nonEmptyString(config.calibration.from, 'config.calibration.from');
   const root = path.resolve(cwd);
   const filePath = path.resolve(root, from);
   if (filePath !== root && !filePath.startsWith(`${root}${path.sep}`)) {
-    throw new Error('shotkit: config.calibration.from must stay inside the project directory');
+    throw new Error('take-a-repo: config.calibration.from must stay inside the project directory');
   }
   const layouts = config.calibration.layouts == null ? [] : config.calibration.layouts;
   if (!Array.isArray(layouts) || layouts.some((layout) => typeof layout !== 'string' || !layout.trim())) {
-    throw new Error('shotkit: config.calibration.layouts must be a string array');
+    throw new Error('take-a-repo: config.calibration.layouts must be a string array');
   }
   return { path: filePath, layouts: [...new Set(layouts.map((layout) => layout.trim()))] };
 }
@@ -170,7 +170,7 @@ function loadCalibration(config, cwd) {
   try {
     parsed = JSON.parse(fs.readFileSync(spec.path, 'utf8'));
   } catch (error) {
-    throw new Error(`shotkit: could not parse calibration file: ${error.message}`, { cause: error });
+    throw new Error(`take-a-repo: could not parse calibration file: ${error.message}`, { cause: error });
   }
   const document = normalizeDocument(parsed);
   assertLayoutPresets(document, spec.layouts);
@@ -204,11 +204,11 @@ function updateCalibrationProfile(config, cwd, story, target, profile) {
   story = nonEmptyString(story, 'calibration story');
   target = nonEmptyString(target, 'calibration target');
   const loaded = loadCalibration(config, cwd);
-  if (!loaded.path) throw new Error('shotkit: config.calibration.from is required before saving a profile');
+  if (!loaded.path) throw new Error('take-a-repo: config.calibration.from is required before saving a profile');
   const normalizedProfile = normalizeProfile(profile);
   assertVerification(normalizedProfile, 'calibration profile');
   if (normalizedProfile.layoutPreset && loaded.layouts.length && !loaded.layouts.includes(normalizedProfile.layoutPreset)) {
-    throw new Error(`shotkit: calibration profile.layoutPreset must be one of: ${loaded.layouts.join(', ')}`);
+    throw new Error(`take-a-repo: calibration profile.layoutPreset must be one of: ${loaded.layouts.join(', ')}`);
   }
   const document = loaded.document;
   if (!document.profiles[story]) document.profiles[story] = {};

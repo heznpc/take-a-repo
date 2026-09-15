@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:starter-series:shotkit:schema:shotkit-manifest:v1",
-  "title": "shotkit handoff manifest",
+  "$id": "urn:starter-series:take-a-repo:schema:take-a-repo-manifest:v1",
+  "title": "take-a-repo handoff manifest",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -18,11 +18,11 @@
     "assets"
   ],
   "properties": {
-    "$schema": { "const": "urn:starter-series:shotkit:schema:shotkit-manifest:v1" },
-    "kind": { "const": "shotkit.manifest" },
+    "$schema": { "const": "urn:starter-series:take-a-repo:schema:take-a-repo-manifest:v1" },
+    "kind": { "const": "take-a-repo.manifest" },
     "version": { "const": 1 },
     "generatedAt": { "type": "string", "format": "date-time" },
-    "tool": { "const": "shotkit" },
+    "tool": { "const": "take-a-repo" },
     "project": { "$ref": "#/$defs/project" },
     "outDir": { "type": "string" },
     "flags": { "type": "object", "additionalProperties": true },
@@ -78,7 +78,7 @@
       ],
       "properties": {
         "contractVersion": { "const": 1 },
-        "entrypoint": { "const": "shotkit-manifest.json" },
+        "entrypoint": { "const": "take-a-repo-manifest.json" },
         "schemas": {
           "type": "object",
           "required": ["manifest", "storyboard", "captions"],
@@ -86,14 +86,14 @@
             "manifest": { "type": "string" },
             "storyboard": { "type": "string" },
             "captions": { "type": "string" },
-            "approval": { "const": "urn:starter-series:shotkit:schema:approval:v1" }
+            "approval": { "const": "urn:starter-series:take-a-repo:schema:approval:v1" }
           }
         },
         "schemaFiles": {
           "type": "object",
           "required": ["manifest", "storyboard", "captions"],
           "properties": {
-            "manifest": { "const": "schemas/shotkit-manifest.schema.json" },
+            "manifest": { "const": "schemas/take-a-repo-manifest.schema.json" },
             "storyboard": { "const": "schemas/storyboard.schema.json" },
             "captions": { "const": "schemas/captions.schema.json" },
             "approval": { "const": "schemas/approval.schema.json" }
@@ -345,7 +345,7 @@
       "properties": {
         "required": { "type": "boolean" },
         "status": { "enum": ["not-requested", "not-ready", "awaiting-approval", "changes-requested", "approved"] },
-        "file": { "const": "shotkit-approval.json" },
+        "file": { "const": "take-a-repo-approval.json" },
         "userActionRequired": { "type": "boolean" },
         "publishable": { "type": "boolean" },
         "targets": {

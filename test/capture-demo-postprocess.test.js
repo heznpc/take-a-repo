@@ -47,8 +47,8 @@ const { capture } = require('../src/capture');
 const { postProcessDemo } = require('../src/video');
 
 test('capture fails when requested demo post-processing fails', async () => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-demo-postprocess-'));
-  const extensionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-extension-'));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-demo-postprocess-'));
+  const extensionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-extension-'));
   const logs = [];
 
   await expect(capture({
@@ -71,6 +71,6 @@ test('capture fails when requested demo post-processing fails', async () => {
     mp4: true,
   }));
   expect(fs.existsSync(webmPath)).toBe(true);
-  expect(fs.existsSync(path.join(cwd, 'store-assets', 'shotkit-manifest.json'))).toBe(false);
+  expect(fs.existsSync(path.join(cwd, 'store-assets', 'take-a-repo-manifest.json'))).toBe(false);
   expect(logs.some((line) => line.includes('post-processing failed'))).toBe(true);
 });

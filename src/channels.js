@@ -1,6 +1,6 @@
 /*
  * Channel profiles are mechanical publishing constraints. Config authors own
- * the story and actions; shotkit owns viewport, codec, duration cap, and poster
+ * the story and actions; take-a-repo owns viewport, codec, duration cap, and poster
  * defaults for known destinations.
  */
 
@@ -69,7 +69,7 @@ const CHANNEL_PROFILES = Object.freeze({
 function resolveChannelProfile(id) {
   const profile = CHANNEL_PROFILES[id];
   if (!profile) {
-    throw new Error(`shotkit: unknown channel target "${id}". Known: ${Object.keys(CHANNEL_PROFILES).join(', ')}`);
+    throw new Error(`take-a-repo: unknown channel target "${id}". Known: ${Object.keys(CHANNEL_PROFILES).join(', ')}`);
   }
   return profile;
 }
@@ -78,7 +78,7 @@ function targetIds(demo) {
   if (demo.targets == null && demo.target == null) return [];
   const values = demo.targets == null ? [demo.target] : demo.targets;
   if (!Array.isArray(values) || !values.length || values.some((value) => typeof value !== 'string' || !value)) {
-    throw new Error(`shotkit: demo "${demo.name || '(unnamed)'}".targets must be a non-empty string array`);
+    throw new Error(`take-a-repo: demo "${demo.name || '(unnamed)'}".targets must be a non-empty string array`);
   }
   return [...new Set(values)];
 }
@@ -86,15 +86,15 @@ function targetIds(demo) {
 function validateTargetOptions(demo, ids) {
   if (demo.targetOptions == null) return;
   if (typeof demo.targetOptions !== 'object' || Array.isArray(demo.targetOptions)) {
-    throw new Error(`shotkit: demo "${demo.name}".targetOptions must be an object`);
+    throw new Error(`take-a-repo: demo "${demo.name}".targetOptions must be an object`);
   }
   const unknown = Object.keys(demo.targetOptions).filter((id) => !ids.includes(id));
   if (unknown.length) {
-    throw new Error(`shotkit: demo "${demo.name}".targetOptions contains undeclared target: ${unknown.join(', ')}`);
+    throw new Error(`take-a-repo: demo "${demo.name}".targetOptions contains undeclared target: ${unknown.join(', ')}`);
   }
   for (const [id, options] of Object.entries(demo.targetOptions)) {
     if (!options || typeof options !== 'object' || Array.isArray(options)) {
-      throw new Error(`shotkit: demo "${demo.name}".targetOptions.${id} must be an object`);
+      throw new Error(`take-a-repo: demo "${demo.name}".targetOptions.${id} must be an object`);
     }
   }
 }

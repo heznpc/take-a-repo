@@ -41,7 +41,7 @@ describe('launchWithExtension', () => {
       + 'Please run the following command to download new browsers: npx playwright install',
     ));
 
-    await expect(launchBrowser({})).rejects.toThrow(/npm i -D demoshot && npx playwright install chromium/);
+    await expect(launchBrowser({})).rejects.toThrow(/npm i -D take-a-repo && npx playwright install chromium/);
     await expect(launchBrowser({})).rejects.toMatchObject({ exitCode: 2 });
   });
 

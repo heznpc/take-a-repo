@@ -4,7 +4,7 @@ const Ajv = require('ajv/dist/2020');
 const addFormats = require('ajv-formats');
 
 const SCHEMAS = Object.freeze({
-  manifest: 'shotkit-manifest.schema.json',
+  manifest: 'take-a-repo-manifest.schema.json',
   storyboard: 'storyboard.schema.json',
   captions: 'captions.schema.json',
 });

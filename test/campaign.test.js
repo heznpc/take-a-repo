@@ -81,7 +81,7 @@ describe('campaign recipes', () => {
 
 describe('campaign selection', () => {
   test('validates, persists, and reloads a recipe selection', () => {
-    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-campaign-'));
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-campaign-'));
     const recipes = resolveCampaignRecipes(targetedConfig());
     const now = () => new Date('2026-07-11T12:00:00.000Z');
 
@@ -107,7 +107,7 @@ describe('campaign selection', () => {
   });
 
   test('uses a non-persisted default and safely replaces stale selections', () => {
-    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-campaign-'));
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-campaign-'));
     const recipes = resolveCampaignRecipes(targetedConfig());
     expect(loadCampaignSelection(outDir, recipes, 'onboarding')).toMatchObject({
       recipeId: 'onboarding',
@@ -137,13 +137,13 @@ describe('campaign selection', () => {
 
 describe('campaign run status', () => {
   test('preserves blocked target status after automatic attempts are exhausted', async () => {
-    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-campaign-run-'));
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-campaign-run-'));
     const outDir = path.join(cwd, 'store-assets');
     fs.mkdirSync(outDir);
     const config = targetedConfig();
     const recipes = resolveCampaignRecipes(config);
     const runner = jest.fn(async () => {
-      fs.writeFileSync(path.join(outDir, 'shotkit-manifest.json'), JSON.stringify({
+      fs.writeFileSync(path.join(outDir, 'take-a-repo-manifest.json'), JSON.stringify({
         handoff: {
           automation: {
             attempt: 3,
@@ -157,7 +157,7 @@ describe('campaign run status', () => {
     const controller = createCampaignRunController({
       cwd,
       config,
-      configPath: path.join(cwd, 'shotkit.config.js'),
+      configPath: path.join(cwd, 'take-a-repo.config.js'),
       outDir,
       recipes,
       runner,

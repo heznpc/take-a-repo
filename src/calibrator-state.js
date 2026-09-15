@@ -83,14 +83,14 @@ function calibrationApprovalOptions(calibrationDocument) {
 }
 
 function syncApprovalManifest(outDir, approvalDocument, calibrationDocument) {
-  const manifestPath = path.join(outDir, 'shotkit-manifest.json');
+  const manifestPath = path.join(outDir, 'take-a-repo-manifest.json');
   const manifest = readJson(manifestPath);
   if (!manifest || !manifest.handoff || !manifest.handoff.automation) return null;
   if (calibrationDocument) applyCalibrationHashes(manifest, calibrationDocument);
   const gate = syncManifestApproval(
     manifest,
     approvalDocument,
-    calibrationDocument ? calibrationApprovalOptions(calibrationDocument) : {},
+    { outDir, ...(calibrationDocument ? calibrationApprovalOptions(calibrationDocument) : {}) },
   );
   writeJson(manifestPath, manifest);
   return gate;
@@ -104,7 +104,7 @@ function createStateReader({ cwd, config }) {
     const approval = loadApproval(outDir);
     const demos = applyCalibrationProfiles(normalizeDemoConfigs(config), calibration.document)
       .filter((demo) => demo.target);
-    const manifest = readJson(path.join(outDir, 'shotkit-manifest.json'), {});
+    const manifest = readJson(path.join(outDir, 'take-a-repo-manifest.json'), {});
     if (calibrationEnabled) applyCalibrationHashes(manifest, calibration.document);
     const storyboard = readJson(path.join(outDir, 'storyboard.json'), {});
     const captions = readJson(path.join(outDir, 'captions.json'), {});
@@ -115,7 +115,7 @@ function createStateReader({ cwd, config }) {
     const approvalGate = syncManifestApproval(
       manifest,
       approval.document,
-      calibrationEnabled ? calibrationApprovalOptions(calibration.document) : {},
+      { outDir, ...(calibrationEnabled ? calibrationApprovalOptions(calibration.document) : {}) },
     );
     const approvalByKey = new Map((approvalGate.targets || []).map((item) => (
       [`${item.story}::${item.target}`, item]
@@ -157,7 +157,8 @@ function createStateReader({ cwd, config }) {
         && profile.verification.status === 'publish-ready'
         && profile.verification.profileHash === profileHash);
       const publishStatus = publish ? publish.status : 'not-requested';
-      const reviewable = publishStatus === 'publish-ready' && verified && !!approvalTarget.assetDigest;
+      const reviewable = publishStatus === 'publish-ready' && verified
+        && approvalTarget.status !== 'not-ready' && !!approvalTarget.assetDigest;
       const reviewStatus = reviewable ? approvalTarget.status : 'not-ready';
       const status = publishStatus === 'publish-ready'
         ? reviewable ? reviewStatus : 'needs-fix'

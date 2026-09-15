@@ -1,15 +1,14 @@
 {
-  "name": "demoshot",
+  "name": "take-a-repo",
   "version": "1.5.0",
-  "description": "Record a captioned demo video of any web app with one command \u2014 then grow into autonomous CWS/X/YouTube launch assets with final-file QA and a human approval gate.",
+  "description": "Collect real browser, native, CLI and API product evidence; verify claims, render launch assets and gate publication on exact-file user approval.",
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
     "./schemas/*": "./schemas/*"
   },
   "bin": {
-    "demoshot": "bin/shotkit.js",
-    "shotkit": "bin/shotkit.js"
+    "take-a-repo": "bin/take-a-repo.js"
   },
   "files": [
     "src",
@@ -18,6 +17,12 @@
     "campaign",
     "skills/capture",
     "skills/demo",
+    "skills/launch-proof",
+    "examples/evidence/*.js",
+    "examples/evidence/native/Proof.swift",
+    "examples/evidence/native/take-a-repo.config.js",
+    "examples/evidence/native/script",
+    "docs/evidence.md",
     "docs/handoff-conventions.md",
     "schemas"
   ],
@@ -78,6 +83,8 @@
   },
   "jest": {
     "collectCoverageFrom": [
+      "src/evidence-*.js",
+      "src/run-session.js",
       "src/channels.js",
       "src/approval.js",
       "src/calibration.js",
@@ -123,10 +130,6 @@
     ]
   },
   "overrides": {
-    "brace-expansion": "5.0.8"
-  },
-  "homepage": "https://github.com/heznpc/shotkit#readme",
-  "bugs": {
-    "url": "https://github.com/heznpc/shotkit/issues"
+    "brace-expansion": "^5.0.9"
   }
 }

@@ -1,7 +1,7 @@
 /*
- * shotkit — output size presets.
+ * take-a-repo — output size presets.
  *
- * Named sizes for the two audiences shotkit serves: store listings (Chrome Web
+ * Named sizes for the two audiences take-a-repo serves: store listings (Chrome Web
  * Store) and social / SNS promo. A scene or promo tile can name a preset
  * (`preset: 'sns-video'`) or give an explicit `{ width, height }`.
  */
@@ -31,7 +31,7 @@ function resolveSize(spec, fallback) {
   if (!spec) return fallback;
   if (typeof spec === 'string') {
     const p = PRESETS[spec];
-    if (!p) throw new Error(`shotkit: unknown size preset "${spec}". Known: ${Object.keys(PRESETS).join(', ')}`);
+    if (!p) throw new Error(`take-a-repo: unknown size preset "${spec}". Known: ${Object.keys(PRESETS).join(', ')}`);
     return p;
   }
   if (spec.width && spec.height) return { width: spec.width, height: spec.height };

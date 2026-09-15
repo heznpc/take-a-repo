@@ -10,7 +10,8 @@ const {
   startCalibrator,
 } = require('../src/calibrator-server');
 
-const DIGEST = 'a'.repeat(64);
+const { createHash } = require('crypto');
+const DIGEST = createHash('sha256').update('0123456789').digest('hex');
 
 function luminance(hex) {
   const channels = hex.match(/../g).map((value) => parseInt(value, 16) / 255).map((value) => (
@@ -33,12 +34,12 @@ function writeJson(filePath, value) {
 }
 
 function projectFixture() {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shotkit-calibrator-'));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-calibrator-'));
   const outDir = path.join(cwd, 'store-assets');
   const name = 'demo-youtube-shorts';
   fs.mkdirSync(outDir);
   fs.writeFileSync(path.join(outDir, `${name}.mp4`), Buffer.from('0123456789'));
-  writeJson(path.join(outDir, 'shotkit-manifest.json'), {
+  writeJson(path.join(outDir, 'take-a-repo-manifest.json'), {
     assets: [{
       id: `sns-demo-mp4:${name}`,
       role: 'sns-demo-mp4',
@@ -72,7 +73,7 @@ function projectFixture() {
   writeJson(path.join(outDir, 'captions.json'), { demos: [] });
   const config = {
     outDir: 'store-assets',
-    calibration: { from: 'shotkit.calibration.json', layouts: ['focus-column', 'compact-column'] },
+    calibration: { from: 'take-a-repo.calibration.json', layouts: ['focus-column', 'compact-column'] },
     demos: [{ name: 'demo', targets: ['youtube-shorts'], run: async () => {} }],
   };
   return { cwd, config, name };
@@ -82,9 +83,9 @@ function multiTargetFixture() {
   const fixture = projectFixture();
   const outDir = path.join(fixture.cwd, 'store-assets');
   const xName = 'demo-x';
-  const xDigest = 'b'.repeat(64);
+  const xDigest = createHash('sha256').update('x-video').digest('hex');
   fs.writeFileSync(path.join(outDir, `${xName}.mp4`), Buffer.from('x-video'));
-  const manifestPath = path.join(outDir, 'shotkit-manifest.json');
+  const manifestPath = path.join(outDir, 'take-a-repo-manifest.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   manifest.assets.push({
     id: `sns-demo-mp4:${xName}`,
@@ -115,7 +116,7 @@ describe('calibrator server', () => {
   test('builds campaign captures while keeping calibrator recaptures build-free', () => {
     const base = {
       cwd: '/tmp/project',
-      configPath: '/tmp/project/shotkit.config.js',
+      configPath: '/tmp/project/take-a-repo.config.js',
       story: 'demo',
       target: 'youtube-shorts',
       attempt: 2,
@@ -189,7 +190,7 @@ describe('calibrator server', () => {
     const calibrator = await startCalibrator({
       cwd,
       config: campaignConfig,
-      configPath: path.join(cwd, 'shotkit.config.js'),
+      configPath: path.join(cwd, 'take-a-repo.config.js'),
       port: 0,
       open: false,
       view: 'campaign',
@@ -198,13 +199,13 @@ describe('calibrator server', () => {
 
     try {
       const root = await fetch(calibrator.url).then((response) => response.text());
-      expect(root).toContain('<title>Shotkit Calibrator</title>');
+      expect(root).toContain('<title>take-a-repo Calibrator</title>');
       expect(root).toContain('href="/campaign/"');
       const redirect = await fetch(`${calibrator.url}/campaign`, { redirect: 'manual' });
       expect(redirect.status).toBe(302);
       expect(redirect.headers.get('location')).toBe('/campaign/');
       const dashboard = await fetch(calibrator.campaignUrl).then((response) => response.text());
-      expect(dashboard).toContain('<title>Shotkit Campaigns</title>');
+      expect(dashboard).toContain('<title>take-a-repo Campaigns</title>');
       expect(dashboard).toContain('href="/"');
       for (const [assetPath, contentType] of [
         ['/styles.css', 'text/css'],
@@ -269,7 +270,7 @@ describe('calibrator server', () => {
         noBuild: false,
         attempt: 2,
       }));
-      expect(fs.existsSync(path.join(cwd, 'shotkit.calibration.json'))).toBe(false);
+      expect(fs.existsSync(path.join(cwd, 'take-a-repo.calibration.json'))).toBe(false);
 
       const approved = await fetch(`${calibrator.url}/api/campaign/review`, {
         method: 'POST',
@@ -296,7 +297,7 @@ describe('calibrator server', () => {
     const calibrator = await startCalibrator({
       cwd,
       config,
-      configPath: path.join(cwd, 'shotkit.config.js'),
+      configPath: path.join(cwd, 'take-a-repo.config.js'),
       port: 0,
       open: false,
       view: 'campaign',
@@ -346,14 +347,14 @@ describe('calibrator server', () => {
 
       const malformedMedia = await fetch(`${calibrator.url}/media/%E0%A4%A`);
       expect(malformedMedia.status).toBe(400);
-      const outside = path.join(os.tmpdir(), `shotkit-outside-${Date.now()}.mp4`);
+      const outside = path.join(os.tmpdir(), `take-a-repo-outside-${Date.now()}.mp4`);
       fs.writeFileSync(outside, 'outside');
       fs.symlinkSync(outside, path.join(cwd, 'store-assets', 'outside.mp4'));
       expect((await fetch(`${calibrator.url}/media/outside.mp4`)).status).toBe(404);
       fs.rmSync(outside, { force: true });
 
       expect(captureTarget).not.toHaveBeenCalled();
-      expect(fs.existsSync(path.join(cwd, 'store-assets', 'shotkit-campaign.json'))).toBe(false);
+      expect(fs.existsSync(path.join(cwd, 'store-assets', 'take-a-repo-campaign.json'))).toBe(false);
     } finally {
       await calibrator.close();
       fs.rmSync(cwd, { recursive: true, force: true });
@@ -367,7 +368,7 @@ describe('calibrator server', () => {
     const calibrator = await startCalibrator({
       cwd,
       config,
-      configPath: path.join(cwd, 'shotkit.config.js'),
+      configPath: path.join(cwd, 'take-a-repo.config.js'),
       port: 0,
       open: false,
       view: 'campaign',
@@ -405,7 +406,7 @@ describe('calibrator server', () => {
       });
       expect(blockedProfile.status).toBe(409);
 
-      const calibrationPath = path.join(cwd, 'shotkit.calibration.json');
+      const calibrationPath = path.join(cwd, 'take-a-repo.calibration.json');
       const calibration = JSON.parse(fs.readFileSync(calibrationPath, 'utf8'));
       calibration.profiles.demo['youtube-shorts'] = {
         ...profile,
@@ -442,7 +443,7 @@ describe('calibrator server', () => {
     const calibrator = await startCalibrator({
       cwd,
       config: campaignConfig,
-      configPath: path.join(cwd, 'shotkit.config.js'),
+      configPath: path.join(cwd, 'take-a-repo.config.js'),
       port: 0,
       open: false,
       view: 'campaign',
@@ -481,7 +482,7 @@ describe('calibrator server', () => {
         }),
       });
       expect(stale.status).toBe(409);
-      expect(fs.existsSync(path.join(cwd, 'store-assets', 'shotkit-approval.json'))).toBe(false);
+      expect(fs.existsSync(path.join(cwd, 'store-assets', 'take-a-repo-approval.json'))).toBe(false);
 
       const approved = await fetch(`${calibrator.url}/api/campaign/review`, {
         method: 'POST',
@@ -497,7 +498,7 @@ describe('calibrator server', () => {
       });
       expect(approved.status).toBe(200);
       const decisions = JSON.parse(fs.readFileSync(
-        path.join(cwd, 'store-assets', 'shotkit-approval.json'),
+        path.join(cwd, 'store-assets', 'take-a-repo-approval.json'),
         'utf8',
       )).decisions.demo;
       expect(Object.keys(decisions).sort()).toEqual(['x', 'youtube-shorts']);
@@ -512,7 +513,7 @@ describe('calibrator server', () => {
     const calibrator = await startCalibrator({
       cwd,
       config,
-      configPath: path.join(cwd, 'shotkit.config.js'),
+      configPath: path.join(cwd, 'take-a-repo.config.js'),
       port: 0,
       open: false,
     });
@@ -562,7 +563,7 @@ describe('calibrator server', () => {
       });
       expect(readProfile(cwd).layoutPreset).toBe('focus-column');
       const savedManifest = JSON.parse(fs.readFileSync(
-        path.join(cwd, 'store-assets', 'shotkit-manifest.json'),
+        path.join(cwd, 'store-assets', 'take-a-repo-manifest.json'),
         'utf8',
       ));
       expect(savedManifest.handoff.approval).toMatchObject({
@@ -571,7 +572,7 @@ describe('calibrator server', () => {
         publishable: false,
       });
 
-      const calibrationPath = path.join(cwd, 'shotkit.calibration.json');
+      const calibrationPath = path.join(cwd, 'take-a-repo.calibration.json');
       const calibration = JSON.parse(fs.readFileSync(calibrationPath, 'utf8'));
       calibration.profiles.demo['youtube-shorts'].verification = {
         profileHash: saved.profileHash,
@@ -642,7 +643,7 @@ describe('calibrator server', () => {
         review: { status: 'not-ready', stale: true },
       });
 
-      const manifestPath = path.join(cwd, 'store-assets', 'shotkit-manifest.json');
+      const manifestPath = path.join(cwd, 'store-assets', 'take-a-repo-manifest.json');
       const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
       manifest.handoff.automation.targets[0].status = 'needs-fix';
       writeJson(manifestPath, manifest);
@@ -657,6 +658,6 @@ describe('calibrator server', () => {
 });
 
 function readProfile(cwd) {
-  const document = JSON.parse(fs.readFileSync(path.join(cwd, 'shotkit.calibration.json'), 'utf8'));
+  const document = JSON.parse(fs.readFileSync(path.join(cwd, 'take-a-repo.calibration.json'), 'utf8'));
   return document.profiles.demo['youtube-shorts'];
 }

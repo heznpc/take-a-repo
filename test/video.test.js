@@ -104,8 +104,8 @@ process.exit(183);
     fs.chmodSync(ffmpeg, 0o755);
 
     expect(probeVideo(video, {
-      SHOTKIT_FFPROBE: ffprobe,
-      SHOTKIT_FFMPEG: ffmpeg,
+      TAKE_A_REPO_FFPROBE: ffprobe,
+      TAKE_A_REPO_FFMPEG: ffmpeg,
       PATH: process.env.PATH,
     })).toMatchObject({
       ok: false,
@@ -133,8 +133,8 @@ if (process.argv.includes('-version')) console.log('ffmpeg version fake');
     fs.chmodSync(ffmpeg, 0o755);
 
     expect(probeVideo(video, {
-      SHOTKIT_FFPROBE: ffprobe,
-      SHOTKIT_FFMPEG: ffmpeg,
+      TAKE_A_REPO_FFPROBE: ffprobe,
+      TAKE_A_REPO_FFMPEG: ffmpeg,
       PATH: process.env.PATH,
     })).toMatchObject({
       ok: true,
@@ -164,20 +164,20 @@ describe('video filter helpers', () => {
 });
 
 describe('findFfmpeg', () => {
-  test('honors SHOTKIT_FFMPEG when it looks like a real ffmpeg', () => {
+  test('honors TAKE_A_REPO_FFMPEG when it looks like a real ffmpeg', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-ff-'));
     const fake = path.join(dir, 'fake-ffmpeg');
     fs.writeFileSync(fake, '#!/bin/sh\necho "ffmpeg version 7.0-test"\n');
     fs.chmodSync(fake, 0o755);
-    expect(findFfmpeg({ SHOTKIT_FFMPEG: fake, PATH: '' })).toBe(fake);
+    expect(findFfmpeg({ TAKE_A_REPO_FFMPEG: fake, PATH: '' })).toBe(fake);
   });
 
   test('returns null when nothing usable exists', () => {
-    expect(findFfmpeg({ SHOTKIT_FFMPEG: '/nonexistent/ffmpeg', PATH: '/nonexistent' })).toBeNull();
+    expect(findFfmpeg({ TAKE_A_REPO_FFMPEG: '/nonexistent/ffmpeg', PATH: '/nonexistent' })).toBeNull();
   });
 
   test('install hint names the env override', () => {
-    expect(INSTALL_HINT).toMatch(/SHOTKIT_FFMPEG/);
+    expect(INSTALL_HINT).toMatch(/TAKE_A_REPO_FFMPEG/);
   });
 });
 
@@ -202,7 +202,7 @@ process.exit(1);
       webmPath,
       mp4: true,
       log: () => {},
-      env: { SHOTKIT_FFMPEG: fake, PATH: '' },
+      env: { TAKE_A_REPO_FFMPEG: fake, PATH: '' },
     })).toThrow();
 
     expect(fs.existsSync(path.join(dir, 'demo.mp4'))).toBe(false);

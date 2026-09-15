@@ -1,7 +1,7 @@
 /*
- * shotkit — downstream handoff recommendations.
+ * take-a-repo — downstream handoff recommendations.
  *
- * This is intentionally advisory. shotkit should not hold credentials or call
+ * This is intentionally advisory. take-a-repo should not hold credentials or call
  * external editors/MCP servers; it should tell agents which connectors are a
  * good next move for the assets that were just captured.
  */
@@ -60,7 +60,7 @@ const DEFAULT_TARGETS = Object.freeze([
     requiredRoles: ['storyboard-contract', 'thumbnail'],
     optionalRoles: ['sns-demo-mp4', 'captions-contract'],
     reason: 'generate campaign variants around the proof clip without replacing the captured product evidence',
-    nextStep: 'Use the storyboard as the prompt brief and the thumbnail/MP4 as visual reference; keep shotkit output as the factual base.',
+    nextStep: 'Use the storyboard as the prompt brief and the thumbnail/MP4 as visual reference; keep take-a-repo output as the factual base.',
   },
   {
     id: 'longcat-video-avatar',
@@ -70,7 +70,7 @@ const DEFAULT_TARGETS = Object.freeze([
     optionalRoles: ['thumbnail', 'sns-demo-mp4'],
     extraInputs: ['avatar reference or presenter style', 'voice/audio or narration text'],
     reason: 'turn captions and storyboard beats into a presenter intro or narrated wrapper around the product proof',
-    nextStep: 'Derive a short script from captions, add avatar/voice inputs, then keep the shotkit MP4 as the product proof segment.',
+    nextStep: 'Derive a short script from captions, add avatar/voice inputs, then keep the take-a-repo MP4 as the product proof segment.',
   },
 ]);
 
@@ -117,7 +117,7 @@ function readinessFor(target, byRole, context = {}) {
   if (target.extraInputs && target.extraInputs.length) {
     return { readiness: 'needs-input', confidence: 'medium', missingRoles: [] };
   }
-  // shotkit's value is the captured clip; a "ready" recommendation with no demo
+  // take-a-repo's value is the captured clip; a "ready" recommendation with no demo
   // media at all (a scenes-only or --no-video run, where storyboard-only targets
   // still satisfy their required roles) is real but lower-confidence.
   const hasClip = byRole.has('sns-demo-mp4') || byRole.has('source-demo-webm');

@@ -1,11 +1,11 @@
 <div align="center">
 
-# Shotkit
+# take-a-repo
 
-**에이전트가 만든 앱, shotkit이 돌아가는 모습을 보여줍니다.**
+**에이전트가 만든 앱, take-a-repo가 돌아가는 모습을 보여줍니다.**
 
-명령 한 줄로 아무 웹 앱의 캡션 달린 데모 클립을 녹화합니다 — 깨끗한
-체크아웃에서 실제로 렌더되고 동작한다는 영상 증거입니다.
+브라우저·네이티브·CLI·API의 실제 실행 증거를 모으고, 기능 주장과 검사 결과를
+연결해 검토할 산출물을 만듭니다. 브라우저 녹화는 입력 방식 중 하나입니다.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Node ≥ 22](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](.nvmrc)
@@ -16,20 +16,27 @@
 
 ---
 
-![shotkit demo — 명령 한 줄로 녹화한 캡션 데모 클립](docs/media/quick-demo.gif)
+![take-a-repo demo — 명령 한 줄로 녹화한 캡션 데모 클립](docs/media/quick-demo.gif)
 
 ```bash
-npm i -D demoshot && npx playwright install chromium   # 최초 1회
-npx demoshot demo http://localhost:3000  # 개발 서버
-npx demoshot demo ./dist                 # 정적 빌드 디렉토리
-npx demoshot demo page.html              # 단일 파일
+npm ci
+node bin/take-a-repo.js examples/evidence --json   # 실제 CLI + API, 브라우저 불필요
+node bin/take-a-repo.js review examples/evidence/product-evidence --json
 ```
 
-> npm 패키지 이름은 **`demoshot`**입니다 (npm이 기존 `shot-kit`과 유사하다는
-> 이유로 `shotkit` 이름을 차단). 설치하면 `demoshot`과 `shotkit` 두 명령이
-> 모두 제공됩니다.
+> 패키지와 명령 이름은 **`take-a-repo`**입니다. 2026-09-07 npm 조회에서는
+> **미게시** 상태입니다. 아래의 소스 실행 또는 로컬 tarball 설치를 사용합니다.
 
-설정은 이것이 전부입니다. 약 30초 뒤 `shotkit-demo/demo.webm`이 나오고,
+[증거 계약과 실행 예제](docs/evidence.md)에 공통 입력, 기능 검사, 실행별 격리,
+채널 변환, 최종 승인을 설명했습니다. macOS AppKit 실구동 예제는
+`examples/evidence/native`에 있습니다.
+
+빠른 브라우저 외형 클립은 Chromium 설치 후
+`node bin/take-a-repo.js demo http://localhost:3000`으로 만듭니다.
+이 경로는 캡처 전용입니다. 페이지가 보이는 것만으로 기능 동작을 증명하거나
+게시 승인을 얻지는 않습니다. 아래는 기존 브라우저 경로 설명입니다.
+
+설정은 이것이 전부입니다. 약 30초 뒤 `take-a-repo-demo/demo.webm`이 나오고,
 ffmpeg가 있으면 `demo.mp4`와 썸네일까지 나옵니다. **설정 파일 없음** —
 캡션은 페이지 자신의 타이틀과 헤딩에서 나오고, 클립은 페이지를 일정한
 속도로 스크롤하며 보여줍니다. 코딩 에이전트는 `--json`(stdout에 JSON 객체
@@ -42,21 +49,25 @@ ffmpeg가 있으면 `demo.mp4`와 썸네일까지 나옵니다. **설정 파일 
 
 ---
 
-> **Shotkit**은 [Heznpc](https://github.com/heznpc)의 독립 출시 에셋 도구입니다. npm의 `shotkit` 이름을 사용할 수 없어 패키지는 [`demoshot`](https://www.npmjs.com/package/demoshot)이며, 기본 CLI는 `shotkit`입니다 (`demoshot` 별칭 유지).
+> **[Starter Series](https://github.com/starter-series)** — 재사용 가능한 출시 도구. 프로젝트·패키지·CLI 이름은 `take-a-repo`이며 npm 게시는 별도 릴리스 단계입니다.
 
 ## 상태와 범위 (Status & Scope)
 
+- **비웹 공통 경로** — `config.evidence`가 repo 소유 실행 도구의 결과를 받아 실제 파일을 검증하고, 주장별 검사 결과와 묶어 실행별 후보를 만듭니다. 검토 시 전체 파일을 다시 해시합니다. 가져온 파일의 검사는 `unverified`로 남습니다. 네이티브 조작 드라이버 자체는 producer가 담당합니다.
 - **현재 구현된 것** — Playwright로 *실제 출하 빌드*를 실행하고 하나의 story를 `cws-youtube`, `x`, `youtube-shorts` variant로 확장합니다. target별 viewport/H.264/trim/caption/thumbnail을 자동 적용하고, 최종 MP4의 ffprobe metadata와 ffmpeg 전체 decode를 검사하며, thumbnail 크기와 픽셀의 blank-frame 여부까지 확인해 기술 상태 `machineStatus`(`publish-ready`, `needs-fix`, `blocked`)를 산출합니다. 별도의 해시 기반 승인 게이트가 전달 상태 `awaiting-approval`, `changes-requested`, `approved`를 관리합니다. manifest에는 에이전트가 실행할 retry action, source evidence와 사용자 승인 상태가 함께 남습니다.
 - **스토리 렌더러** — 데모 config는 단일 `demo` 또는 여러 `demos: []`, timed `captions`, click highlight, 녹화 가능한 native select 변경, cursor pacing, 정적 zoom/crop, thumbnail frame, storyboard lint, 작은 `demo` helper(`caption`, `step`, `wait`, `click`, `select`)를 쓸 수 있습니다. 에이전트가 기능 체크리스트를 20~40초짜리 before → action → result → safety/restore 캠페인 컷으로 바꾸기 쉬운 정도까지만 제공합니다.
-- **설계 의도** — *엔진 1개, 표면 여러 개 — 단, 도구 성격에 맞는 표면.* shotkit은 무겁고 파일을 산출하는 빌드 도구라 표면이 CLI(+`--json`)·skill·CI입니다 — MCP가 아니라(하지 않기로 한 것 참고). 캡처는 **결정적**(로그인 불필요 픽스처, freeze된 데이터)이고, 실행이 **실제 빌드본 smoke test를 겸함** — 스크린샷이 나온다 = 그 기능이 출하 코드에서 렌더됨. 모든 샷에 면책 밴드를 합성해 **상표 안전**.
-- **하지 않기로 한 것** — shotkit 내부 MCP 서버, repo별 story/action 의도 제거, 범용 timeline editor, 호스티드 데모 플랫폼. 반복 가능한 채널 작업은 자동화하고 수동 편집기는 명시적으로 요청한 fallback일 때만 노출합니다.
+- **설계 의도** — *엔진 1개, 표면 여러 개 — 단, 도구 성격에 맞는 표면.* take-a-repo는 무겁고 파일을 산출하는 빌드 도구라 표면이 CLI(+`--json`)·skill·CI입니다 — MCP가 아니라(하지 않기로 한 것 참고). 캡처는 **결정적**(로그인 불필요 픽스처, freeze된 데이터)이고, 실행이 **실제 빌드본 smoke test를 겸함** — 스크린샷이 나온다 = 그 기능이 출하 코드에서 렌더됨. 모든 샷에 면책 밴드를 합성해 **상표 안전**.
+- **하지 않기로 한 것** — take-a-repo 내부 MCP 서버, repo별 story/action 의도 제거, 범용 timeline editor, 호스티드 데모 플랫폼. 반복 가능한 채널 작업은 자동화하고 수동 편집기는 명시적으로 요청한 fallback일 때만 노출합니다.
 - **공개하지 않음** — 없음.
 
 ## 설치
 
 ```bash
-npm i -D demoshot
-npx playwright install chromium    # 최초 1회: shotkit이 구동할 브라우저
+npm ci
+npm pack                          # take-a-repo-1.5.0.tgz 생성
+# consumer에서 실제 생성된 tarball 설치:
+npm i -D /absolute/path/to/take-a-repo-1.5.0.tgz
+npx playwright install chromium   # 브라우저 producer를 사용할 때만
 ```
 
 또는 이 repo에서 직접 실행합니다:
@@ -65,65 +76,65 @@ npx playwright install chromium    # 최초 1회: shotkit이 구동할 브라우
 npm ci
 npm run lint
 npm test
-node bin/shotkit.js --help
+node bin/take-a-repo.js --help
 ```
 
-설정 파일이 있는 repo에서 무설치 실행:
+로컬 설치 후 설정 파일이 있는 repo에서 실행:
 
 ```bash
-npx demoshot
+npx --no-install take-a-repo --json
 ```
 
-> shotkit은 **풀 Chromium**(`channel: 'chromium'`)을 구동합니다 — 확장 서브시스템이 없는 headless-shell이 아닙니다. **headless 동작 검증 완료**(`HEADED=0`; macOS·Linux CI, 영상 포함)이며 starter capture 워크플로의 기본값입니다. 로컬 기본은 디버깅 편의상 headed. CI 러너에서 headed-under-xvfb는 신뢰할 수 없었습니다(8비트 기본값은 스크린샷 캡처가 깨지고, 24비트로도 무성 실패) — CI에서는 headless를 쓰십시오.
+> take-a-repo는 **풀 Chromium**(`channel: 'chromium'`)을 구동합니다 — 확장 서브시스템이 없는 headless-shell이 아닙니다. **headless 동작 검증 완료**(`TAKE_A_REPO_HEADED=0`; macOS·Linux CI, 영상 포함)이며 starter capture 워크플로의 기본값입니다. 로컬 기본은 디버깅 편의상 headed. CI 러너에서 headed-under-xvfb는 신뢰할 수 없었습니다(8비트 기본값은 스크린샷 캡처가 깨지고, 24비트로도 무성 실패) — CI에서는 headless를 쓰십시오.
 
 ## 사용
 
 제로 컨피그 경로는 파일이 전혀 필요 없습니다:
 
 ```bash
-shotkit demo http://localhost:3000   # 아무 웹 앱의 캡션 데모 클립
-shotkit demo ./dist --duration 30    # 정적 디렉토리, 더 긴 클립
-shotkit demo --help                  # 전체 옵션
+take-a-repo demo http://localhost:3000   # 아무 웹 앱의 캡션 데모 클립
+take-a-repo demo ./dist --duration 30    # 정적 디렉토리, 더 긴 클립
+take-a-repo demo --help                  # 전체 옵션
 ```
 
 그대로 올릴 수 있는 파일이 필요하면 채널만 지정하면 됩니다. 크기·트림·캡션이
 채널 규격으로 맞춰지고, **그 채널의 공개 제한값에 대해 실제로 검증**됩니다:
 
 ```bash
-shotkit demo http://localhost:3000 --for x                # 1280×720, 140초 이하
-shotkit demo http://localhost:3000 --for youtube-shorts   # 720×1280, focus 캡션
-shotkit demo http://localhost:3000 --for x,cws-youtube    # 한 번에 둘 다
+take-a-repo demo http://localhost:3000 --for x                # 1280×720, 140초 이하
+take-a-repo demo http://localhost:3000 --for youtube-shorts   # 720×1280, focus 캡션
+take-a-repo demo http://localhost:3000 --for x,cws-youtube    # 한 번에 둘 다
 ```
 
 채널마다 `demo-<채널>.mp4`와 포스터 프레임이 추가됩니다. 산출 파일이 해당
 채널의 해상도·코덱·길이 제한을 벗어나면 실행이 실패하므로, "업로드 준비됨"은
 가정이 아니라 측정 결과입니다. `--for`에는 ffmpeg가 필요합니다.
 
-전체 파이프라인은 `shotkit.config.js`(repo별 이음새 — 영문 README의
+전체 파이프라인은 `take-a-repo.config.js`(repo별 이음새 — 영문 README의
 contract 참고)를 두고:
 
 ```bash
-shotkit                         # outDir에 전부 산출
-shotkit --scene 01-feature      # 특정 scene/타일/데모/demos 항목 또는 "description"만
-shotkit --target x              # 설정된 X variant만 제작/재시도
-shotkit --attempt 2 --json      # 두 번째 자동 수정 시도
-shotkit --campaign              # Recipe 선택, 자동 제작, 최종 영상 검수
-shotkit --calibrate             # 로컬 구도 Calibrator 열기
-shotkit --no-video              # 스크린캐스트 생략
-shotkit --no-build              # 이미 빌드된 번들 사용
-shotkit ../my-extension --json  # 다른 체크아웃 대상 실행; 결과 JSON을 stdout에
+take-a-repo                         # outDir에 전부 산출
+take-a-repo --scene 01-feature      # 특정 scene/타일/데모/demos 항목 또는 "description"만
+take-a-repo --target x              # 설정된 X variant만 제작/재시도
+take-a-repo --attempt 2 --json      # 두 번째 자동 수정 시도
+take-a-repo --campaign              # Recipe 선택, 자동 제작, 최종 영상 검수
+take-a-repo --calibrate             # 로컬 구도 Calibrator 열기
+take-a-repo --no-video              # 스크린캐스트 생략
+take-a-repo --no-build              # 이미 빌드된 번들 사용
+take-a-repo ../my-extension --json  # 다른 체크아웃 대상 실행; 결과 JSON을 stdout에
 ```
 
-산출물은 `outDir`(기본 `store-assets/`): `<scene>.png`, `<promoTile>.png`, `<demo>.webm`, 선택적 `<demo>.mp4`, 선택적 `<demo>-thumbnail.png`, `description.md`, 그리고 기본값으로 `storyboard.json`, `captions.json`, `shotkit-manifest.json`, `schemas/*.schema.json`입니다(`handoff: false`면 handoff pack을 끕니다). 첫 검수 결정 시 `shotkit-approval.json`이 생성됩니다.
+산출물은 `outDir`(기본 `store-assets/`): `<scene>.png`, `<promoTile>.png`, `<demo>.webm`, 선택적 `<demo>.mp4`, 선택적 `<demo>-thumbnail.png`, `description.md`, 그리고 기본값으로 `storyboard.json`, `captions.json`, `take-a-repo-manifest.json`, `schemas/*.schema.json`입니다(`handoff: false`면 handoff pack을 끕니다). 첫 검수 결정 시 `take-a-repo-approval.json`이 생성됩니다.
 
 ### 캠페인 대시보드
 
-`shotkit --campaign`은 로컬 Campaign Dashboard를 엽니다. 채널 target이 있는
+`take-a-repo --campaign`은 로컬 Campaign Dashboard를 엽니다. 채널 target이 있는
 story는 기본적으로 하나의 Campaign Recipe가 되며, Recipe가 설정된 channel
 profile 전체를 소유합니다. 따라서 사용자는 채널 조합이나 영상 편집 설정을
 반복해서 고르지 않고 Recipe 하나를 선택한 뒤 최종 산출물만 검수합니다.
 
-선택한 Recipe는 `shotkit-campaign.json`에 별도로 기록됩니다. 이 파일은 config,
+선택한 Recipe는 `take-a-repo-campaign.json`에 별도로 기록됩니다. 이 파일은 config,
 manifest, calibration, approval 계약을 바꾸지 않습니다. `config.campaign.recipes`
 로 Recipe의 이름과 설명을 붙일 수 있으며, calibration을 사용하지 않는 repo도
 Campaign Dashboard에서 제작과 digest-bound 승인을 사용할 수 있습니다.
@@ -138,8 +149,8 @@ Dashboard는 feedback과 산출물 상태를 기록하지만 소비자 repo의 s
 ### 구도 Calibrator
 
 자동 재시도로 세로 구도가 해결되지 않는 repo는 `config.calibration`에 추적할
-`shotkit.calibration.json` 경로와 허용할 layout preset 목록을 선언할 수
-있습니다. `shotkit --calibrate`는 실제 캡처 MP4를 사용하는 로컬 대시보드를
+`take-a-repo.calibration.json` 경로와 허용할 layout preset 목록을 선언할 수
+있습니다. `take-a-repo --calibrate`는 실제 캡처 MP4를 사용하는 로컬 대시보드를
 열며, 조정 범위를 layout preset, 1.00~1.20 framing, caption 위치/표현, 최대
 3개의 protected region으로 제한합니다. 저장은 CommonJS config를 고치지 않고
 JSON만 기록합니다. 현재 profile로 실제 story를 재촬영해 `publish-ready`가
@@ -160,10 +171,10 @@ handoff pack은 에이전트가 target별 최종 파일을 검증하고 자동 �
 - `storyboard.json` — demo 이름, audience, viewport, trim/framing hint, beats,
   구조화된 storyboard lint warning, 추천 next tool.
 - `captions.json` — demo별 caption timing/text와 실제 렌더링 타이포그래피 QA.
-- `shotkit-manifest.json` — entrypoint. asset inventory/integrity, 실행·freshness
+- `take-a-repo-manifest.json` — entrypoint. asset inventory/integrity, 실행·freshness
   metadata, 로컬 schema path, `handoff.automation`의 target 검사/retry action,
   `handoff.approval`의 최종 게시 게이트.
-- `shotkit-approval.json` — 첫 결정 후 생성되며 Approve 또는 Request changes를
+- `take-a-repo-approval.json` — 첫 결정 후 생성되며 Approve 또는 Request changes를
   정확한 미디어 SHA-256과 calibration profile hash에 결합합니다.
 - `schemas/*.schema.json` — 설치된 npm 패키지 없이도 검증할 수 있도록
   모든 pack에 함께 복사되는 계약.
@@ -172,7 +183,7 @@ target workflow에서는 수동 editor hint를 기본으로 숨기며,
 `automation.manualFallback:true`일 때만 명시적으로 다시 노출합니다.
 
 다국어 campaign variant는 실행 환경의 시스템 폰트 대신 locale과 프로젝트 내부
-폰트를 명시할 수 있습니다. Shotkit은 작성된 글자의 glyph coverage를 먼저
+폰트를 명시할 수 있습니다. take-a-repo는 작성된 글자의 glyph coverage를 먼저
 확인하고, 필요한 글자만 WOFF2로 줄여 녹화 페이지에 삽입한 뒤 브라우저 로드를
 기다립니다. 각 caption은 선언된 최소 크기와 최대 줄 수 안에서만 자동으로
 축소됩니다.
@@ -191,7 +202,7 @@ captionOptions: {
     fit: 'shrink',
     fonts: [{
       family: 'Campaign Sans',
-      from: '.shotkit/fonts/campaign-sans.woff2',
+      from: '.take-a-repo/fonts/campaign-sans.woff2',
       weight: '100 900',
     }],
   },
@@ -230,7 +241,7 @@ demo: {
 }
 ```
 
-Shotkit은 이를 target별 이름으로 확장하고 가로형은 1280×720, Shorts는
+take-a-repo는 이를 target별 이름으로 확장하고 가로형은 1280×720, Shorts는
 720×1280로 촬영합니다. H.264/yuv420p, 30초 cap, poster frame과 최종 파일
 검사를 자동 적용합니다. `needs-fix`는 사용자 검토 요청이 아니라 에이전트가
 config를 수정하고 `automation.retryScenes[]`를 다시 실행하라는 뜻입니다.
@@ -306,7 +317,7 @@ demo: {
 
 storyboard lint는 기본으로 켜져 있으며 실패 대신 warning을 남깁니다.
 같은 warning은 `storyboard.json`에 `code`, `severity`, `message`, `fix`
-형태로 기록되므로, 에이전트가 다음 패스에서 `shotkit.config.js`를 고치기
+형태로 기록되므로, 에이전트가 다음 패스에서 `take-a-repo.config.js`를 고치기
 쉽습니다. mp4 누락, 3초 이후 첫 캡션, 홀수 영상 크기, 너무 긴 캡션,
 safety/restore beat 누락, crop/zoom edge risk, 20~40초 바깥 trim을
 잡아줍니다. 실제 녹화 중에는 모든 caption frame의 위치, overflow, 줄 수,
@@ -350,7 +361,7 @@ result → safety/restore, 짧은 캡션, 느린 cursor/click/typing, X용 mp4�
 
 ### 에이전트 계약 (`--json`)
 
-`shotkit [path] --json`은 stdout에 **정확히 하나의 JSON 객체**를 출력합니다
+`take-a-repo [path] --json`은 stdout에 **정확히 하나의 JSON 객체**를 출력합니다
 (진행 로그는 stderr로 이동): `{ "ok": true, "status": "awaiting-approval", "machineStatus": "publish-ready", "outDir": …, "manifest": …, "produced": [절대경로…] }`.
 종료 코드: `0` 정상 · `1` 런타임 실패 · `2` 사용법 오류/설정 없음입니다.
 `ok:true`는 실행 완료, `machineStatus:publish-ready`는 story lint, H.264/yuv420p,
@@ -365,7 +376,7 @@ skill(Agent Skills 표준 — 호환 도구의 skills 디렉터리에 폴더째 
 
 ## 로드맵 — 엔진 1개, 표면 여러 개
 
-CLI `--json`+`path`(소스 ✅, `npx demoshot` ✅) · `capture()`(✅) · Claude Code plugin+skill(✅ `/plugin install shotkit@starter-series`) · AGENTS.md 실행 블록(✅) · npm 패키지(릴리스 대상) · capture-in-CI GitHub Action(✅) · 데모 story rendering(`demo`/`demos[]`/캡션/click highlight/cursor pacing/zoom/crop/thumbnail/lint/mp4/trim ✅). MCP stdio 도구는 검토 후 **폐기** — "하지 않기로 한 것" 참고.
+CLI `--json`+`path`(소스 ✅, `npx take-a-repo` ✅) · `capture()`(✅) · Claude Code plugin+skill(✅ `/plugin install take-a-repo@starter-series`) · AGENTS.md 실행 블록(✅) · npm 패키지(릴리스 대상) · capture-in-CI GitHub Action(✅) · 데모 story rendering(`demo`/`demos[]`/캡션/click highlight/cursor pacing/zoom/crop/thumbnail/lint/mp4/trim ✅). MCP stdio 도구는 검토 후 **폐기** — "하지 않기로 한 것" 참고.
 
 **일반화 규칙**(시리즈의 다음 기능용): npm 패키지 1개(엔진+얇은 CLI) + `*.config.js` 이음새 1개 + **도구 성격에 맞는 에이전트 표면**(빠른 구조화 도구: `path` 받는 MCP 도구 / 무거운 빌드 도구: `--json` CLI + skill + AGENTS.md 블록) + 마켓플레이스 항목 1개. **엔진은 config 이음새 외엔 프로젝트 특이사항을 읽지 않는다.**
 

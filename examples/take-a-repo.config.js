@@ -1,5 +1,5 @@
 /*
- * Example shotkit.config.js — reference only (not executed in CI).
+ * Example take-a-repo.config.js — reference only (not executed in CI).
  *
  * A minimal config that screenshots an extension's popup and a content-script
  * state on a local fixture. Real consumers: see browser-extension-starter
@@ -7,7 +7,7 @@
  */
 
 const path = require('path');
-const { stageExtension, patchManifestForLocalhost, serveDirectory } = require('shotkit');
+const { stageExtension, patchManifestForLocalhost, serveDirectory } = require('take-a-repo');
 
 const FIXTURES = path.join(__dirname, 'fixtures');
 

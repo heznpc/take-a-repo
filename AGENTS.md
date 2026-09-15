@@ -1,25 +1,38 @@
-# Shotkit
+# take-a-repo
 
-An autonomous launch asset pipeline with explicit final user approval for browser extensions.
-Playwright drives the shipped product; channel profiles, automated QA, the `shotkit` CLI, programmatic
+An execution-evidence and launch-asset pipeline with explicit final user approval.
+Browser capture plus native/CLI/API command producers share the `capture()` entrypoint.
+Playwright drives browser products; channel profiles, automated QA, the `take-a-repo` CLI, programmatic
 `capture()`, and `skills/capture/` Claude Code skill expose the same engine.
 Vanilla JS, CommonJS, no build step.
 
 ## Run this tool (for agents)
 
-To capture store/social assets from a repo that has a `shotkit.config.js`
-(or legacy `store.config.js`):
+For a runnable non-web example from this source checkout:
 
 ```bash
-node bin/shotkit.js --json          # from this source repo
-node bin/shotkit.js <path> --json   # run against another checkout
+node bin/take-a-repo.js examples/evidence --json
+node bin/take-a-repo.js review examples/evidence/product-evidence --json
 ```
 
-After npm publication, installed projects can use `shotkit --json` or
+Read `docs/evidence.md` for the producer/check/claim contract and
+`skills/launch-proof/SKILL.md` for development-completion handoff. Native inputs
+come from real platform tools; do not substitute a web mock. Evidence runs have
+isolated directories and whole-file-set approval. Partial evidence runs are
+diagnostic only. `status <outDir> --json` rehashes the current candidate.
+
+To capture store/social assets from a repo that has a `take-a-repo.config.js`:
+
+```bash
+node bin/take-a-repo.js --config <config-path> --json
+node bin/take-a-repo.js <path> --json   # run against another checkout
+```
+
+After npm publication, installed projects can use `take-a-repo --json` or
 `npm run capture:store -- --json` when the project defines that wrapper.
 
 Prereqs: `npm exec -- playwright install chromium` (one-time); the config's `build`
-command must succeed. Headless works (`HEADED=0`; verified on macOS + Linux CI,
+command must succeed. Headless works (`TAKE_A_REPO_HEADED=0`; verified on macOS + Linux CI,
 video included); the local default is headed. Exit codes: `0` ok · `1` runtime
 failure · `2` usage / no config. In `--json` mode progress logs go to stderr;
 stdout is exactly one JSON object. Useful flags: `--scene <name>`,
@@ -30,7 +43,7 @@ Success JSON carries a technical `machineStatus` plus delivery `status`:
 the user; after technical QA passes, the user reviews the final media and
 chooses Approve or Request changes.
 Every run also writes `storyboard.json`, `captions.json`, and
-`shotkit-manifest.json` unless `handoff:false` is set in config.
+`take-a-repo-manifest.json` unless `handoff:false` is set in config.
 
 ## Structure
 
@@ -52,14 +65,14 @@ src/
   describe.js    → extractListing / renderDescriptionDoc (STORE_LISTING.md → copy)
   presets.js     → PRESETS / resolveSize (CWS + SNS sizes)
   video.js       → demo post-processing: mp4/trim/crop/zoom/thumbnail (real ffmpeg required)
-  handoff.js     → storyboard/captions/shotkit-manifest JSON contract
+  handoff.js     → storyboard/captions/take-a-repo-manifest JSON contract
   handoff-files.js / handoff-validator.js → integrity, atomic IO, runtime schemas
   image-qa.js    → nonblank thumbnail pixel checks
   publish.js     → publish-ready/needs-fix/blocked target plan
   schemas/       → JSON schemas for the v1 handoff contract
   cli.js         → CLI arg parsing + config resolution (unit-tested)
   index.js       → public API (the contract — don't break exports)
-bin/shotkit.js   → CLI (thin wrapper over capture(); --json agent contract)
+bin/take-a-repo.js   → CLI (thin wrapper over capture(); --json agent contract)
 calibrator/      → local constrained composition UI (actual capture media)
 skills/capture/  → Claude Code skill wrapping the CLI (Agent Skills format)
 test/            → unit tests for the pure/safe modules (no browser)
@@ -72,7 +85,7 @@ test/            → unit tests for the pure/safe modules (no browser)
   (CodeQL `js/path-injection`). There's a test for it.
 - **Full-Chromium channel**: always `channel:'chromium'` — the headless-shell
   strips the extension subsystem; never switch to it. Under the full channel,
-  headless **works** (`HEADED=0`; verified 2026-06-10 on macOS + Linux CI,
+  headless **works** (`TAKE_A_REPO_HEADED=0`; verified 2026-06-10 on macOS + Linux CI,
   recordVideo included); the local default stays headed for debuggability.
   Headed-under-xvfb is unsupported on CI runners (the 8-bit default breaks
   `Page.captureScreenshot`; a 24-bit screen still failed silently) — run
@@ -106,16 +119,16 @@ test/            → unit tests for the pure/safe modules (no browser)
   Escalate only after `automation.maxAttempts` yields `blocked`. Manual editor
   hints are disabled unless `automation.manualFallback:true` is explicit.
 - **User approval is the publication gate**: never treat machine
-  `publish-ready` as permission to publish. `shotkit-approval.json` binds each
+  `publish-ready` as permission to publish. `take-a-repo-approval.json` binds each
   decision to the exact deliverable SHA-256 and calibration profile hash; any
   recapture or profile edit makes the old decision stale. Only an `approved`
   current digest is publishable. Agents must not approve on the user's behalf.
 - **Storyboard lint is structured for agents**: runtime logs are human strings,
   but `storyboard.json` carries `code`, `severity`, `message`, and `fix` so the
   next config edit can be mechanical.
-- **Calibration is exception-only**: `shotkit --calibrate` may adjust only a
+- **Calibration is exception-only**: `take-a-repo --calibrate` may adjust only a
   declared layout preset, bounded framing, caption lane/appearance, and up to
-  three protected regions. It writes `shotkit.calibration.json`, never config
+  three protected regions. It writes `take-a-repo.calibration.json`, never config
   source. A profile is verified only after a matching real recapture returns
   `publish-ready`; stale profiles stay `needs-fix`. Do not grow this into a
   free-layer, keyframe, or timeline editor.
@@ -126,15 +139,15 @@ test/            → unit tests for the pure/safe modules (no browser)
 - Unit tests cover only the pure modules; the browser path is verified by running
   a real consumer's capture (browser-extension-starter / skillBridge).
 
-## Integration pattern
+## Generalization rule (for the next starter-series capability)
 
 One npm package (engine + thin CLI), one `*.config.js` contract for irreducible
 per-repo intent, **agent surfaces matched to the tool's nature** — fast /
 structured-data tools get an MCP tool taking a `path` (like `create-starter`'s
-audits); heavy, file-producing build tools like shotkit get a `--json` CLI +
+audits); heavy, file-producing build tools like take-a-repo get a `--json` CLI +
 Claude Code skill + AGENTS.md run-block instead — plus one marketplace entry.
 **The engine never reads project specifics except through the config contract.**
-shotkit is the reference implementation of the non-MCP branch; mirror
+take-a-repo is the reference implementation of the non-MCP branch; mirror
 [`create-starter`](https://github.com/starter-series/create-starter) for the
 MCP branch.
 
@@ -170,7 +183,7 @@ For a desktop product that does not reflow at 720×1280, use the Shorts
 `targetOptions` override for a narrower story and capture-only fixture layout.
 Do not squeeze the complete desktop page into 9:16. Runtime caption QA must pass
 actual bounds, overflow, line-count, stroke, presence, and timing checks.
-Prefer one story with `targets:['cws-youtube','x','youtube-shorts']`; shotkit
+Prefer one story with `targets:['cws-youtube','x','youtube-shorts']`; take-a-repo
 replays the action script with target-specific framing. Read
 `handoff.automation`, apply agent-owned fixes, and rerun only
 `automation.retryScenes[]`. Once technical QA passes, open the final candidate

@@ -8,7 +8,7 @@
  *   channel: 'chromium'
  *     The default headless-shell strips the extension subsystem entirely
  *     (no service worker, MV3 onInstalled never fires) — the full Chromium
- *     channel is required. Under it, headless ALSO works (HEADED=0; verified
+ *     channel is required. Under it, headless ALSO works (TAKE_A_REPO_HEADED=0; verified
  *     2026-06-10 on macOS + Linux CI, recordVideo included). The local
  *     default stays headed for easy debugging. Headed-under-xvfb proved
  *     unreliable on CI runners — prefer headless there.
@@ -28,7 +28,7 @@ const { chromium } = require('playwright');
 /**
  * Playwright's own "browser not downloaded" message tells the user to run
  * `npx playwright install`, which resolves a *different* playwright than the
- * one shotkit runs under when shotkit was launched through a bare `npx` — the
+ * one take-a-repo runs under when take-a-repo was launched through a bare `npx` — the
  * browser lands in a build directory this process never looks at. Rewrite it
  * into the instruction that works: install into the same dependency tree.
  *
@@ -38,11 +38,11 @@ function missingBrowserError(err) {
   const message = err && err.message ? err.message : '';
   if (!/Executable doesn't exist|Please run the following command to download/.test(message)) return null;
   const replacement = new Error(
-    "shotkit needs Playwright's Chromium, and this install doesn't have it yet.\n"
-    + '  npm i -D demoshot && npx playwright install chromium\n'
-    + 'Installing demoshot into the project first is what makes `npx playwright` resolve\n'
-    + "the same Playwright shotkit runs under; a bare `npx playwright install` can download\n"
-    + 'a build for a different version. Set SHOTKIT_FFMPEG / PLAYWRIGHT_BROWSERS_PATH if you\n'
+    "take-a-repo needs Playwright's Chromium, and this install doesn't have it yet.\n"
+    + '  npm i -D take-a-repo && npx playwright install chromium\n'
+    + 'Installing take-a-repo into the project first is what makes `npx playwright` resolve\n'
+    + "the same Playwright take-a-repo runs under; a bare `npx playwright install` can download\n"
+    + 'a build for a different version. Set TAKE_A_REPO_FFMPEG / PLAYWRIGHT_BROWSERS_PATH if you\n'
     + 'keep browsers somewhere custom.',
     { cause: err },
   );
@@ -69,7 +69,7 @@ async function launchBrowser({ extensionDir = null, viewport, recordVideoDir, re
 
   const launchOpts = {
     channel: 'chromium',
-    headless: process.env.HEADED === '0',
+    headless: process.env.TAKE_A_REPO_HEADED === '0',
     viewport: viewport || { width: 1280, height: 800 },
     // Force 1:1 CSS↔device pixels so a 1280×800 viewport yields a 1280×800
     // PNG (a Retina default of 2 would produce 2560×1600 — too big for CWS).

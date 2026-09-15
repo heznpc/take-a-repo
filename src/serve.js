@@ -10,7 +10,7 @@
  * the content script will match.
  *
  * Projects with richer needs (path-routed fixtures, request stubbing) bring
- * their own server in store.config.js's setup() instead.
+ * their own server in take-a-repo.config.js's setup() instead.
  */
 
 const fs = require('fs');

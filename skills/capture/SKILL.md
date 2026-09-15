@@ -1,16 +1,20 @@
 ---
 name: capture
-description: Autonomously produce browser-extension launch assets with shotkit, then present the technically verified final media for explicit user approval. Use for CWS/YouTube promo video, X video, YouTube Shorts, store screenshots, listing/privacy evidence, or channel variants. Infer mechanical channel settings, capture, validate, fix, and retry without interrupting the user; bind Approve or Request changes to the exact final file digest.
-allowed-tools: Bash(shotkit*), Bash(node bin/shotkit.js*), Bash(npm run capture:store*), Bash(npm exec -- playwright install chromium), Read, Edit, Write
+description: Autonomously produce browser-extension launch assets with take-a-repo, then present the technically verified final media for explicit user approval. Use for CWS/YouTube promo video, X video, YouTube Shorts, store screenshots, listing/privacy evidence, or channel variants. Infer mechanical channel settings, capture, validate, fix, and retry without interrupting the user; bind Approve or Request changes to the exact final file digest.
+allowed-tools: Bash(take-a-repo*), Bash(node bin/take-a-repo.js*), Bash(npm run capture:store*), Bash(npm exec -- playwright install chromium), Read, Edit, Write
 ---
 
-# Produce and approve launch assets with shotkit
+# Produce and approve launch assets with take-a-repo
 
-shotkit drives the repo's **built** extension with Playwright and writes assets
+This skill is the browser-specific path. When completing a product with native,
+CLI or API evidence, use the bundled `launch-proof` skill and
+`docs/evidence.md`; do not force the product into a web page.
+
+take-a-repo drives the repo's **built** extension with Playwright and writes assets
 into the config's `outDir` (default `store-assets/`). A successful run doubles
 as a real-bundle smoke test — a screenshot or clip only appears if that feature
 rendered from the shipped code. By default, it also writes a handoff pack:
-`storyboard.json`, `captions.json`, and `shotkit-manifest.json`.
+`storyboard.json`, `captions.json`, and `take-a-repo-manifest.json`.
 
 ## Autonomous workflow
 
@@ -18,8 +22,7 @@ rendered from the shipped code. By default, it also writes a handoff pack:
    campaign request. Supported targets are `cws-youtube`, `x`, and
    `youtube-shorts`. Do not ask the user to choose viewport, codec, duration,
    thumbnail timing, or editor.
-2. **Preconditions** — the repo has a `shotkit.config.js` (or legacy
-   `store.config.js`); Chromium is installed (`npm exec -- playwright install chromium`,
+2. **Preconditions** — the repo has a `take-a-repo.config.js`; Chromium is installed (`npm exec -- playwright install chromium`,
    one-time); the config's `build` command succeeds.
 3. **Create or update one story** — keep product actions and captions in one
    demo and declare channel variants through `targets`:
@@ -36,7 +39,7 @@ rendered from the shipped code. By default, it also writes a handoff pack:
    }
    ```
 
-   Shotkit expands target-specific names, viewport, H.264 MP4, 30-second cap,
+   take-a-repo expands target-specific names, viewport, H.264 MP4, 30-second cap,
    poster frame, and caption treatment. The `youtube-shorts` profile uses
    three-word outline focus chunks with an animated current-word highlight and a
    visual-guide-safe left/bottom placement. Use `targetOptions.<id>` only when the shared
@@ -52,30 +55,30 @@ rendered from the shipped code. By default, it also writes a handoff pack:
 4. **Run attempt 1** (from the repo, or pass its path):
 
    ```bash
-   shotkit --json --attempt 1
-   shotkit <path> --json --attempt 1
+   take-a-repo --json --attempt 1
+   take-a-repo <path> --json --attempt 1
    ```
 
    If repeated composition fixes remain unresolved and the repo declares
-   `config.calibration`, start `shotkit --calibrate`. Keep adjustments inside
+   `config.calibration`, start `take-a-repo --calibrate`. Keep adjustments inside
    its authored presets, bounded framing/caption controls, and three protected
    regions. Save the profile, trigger the real recapture, and continue only
    from its resulting `publish-ready` or structured `needs-fix` state. Do not
    ask the user to diagnose composition or operate the controls. Once technical
-   QA passes, open `shotkit --campaign` for the user's final media decision.
+   QA passes, open `take-a-repo --campaign` for the user's final media decision.
 
    Before npm publication, run the source checkout with
-   `node bin/shotkit.js --json --attempt 1`, or use a project wrapper such as
+   `node bin/take-a-repo.js --json --attempt 1`, or use a project wrapper such as
    `npm run capture:store -- --json`.
 
    Useful flags: `--scene <name>` (one story, expanded variant, static scene,
    `description`, or `privacy`),
    `--target <id>` (one channel target),
    `--no-video` (skip the screencast), `--mp4` (also emit an H.264 mp4 of the
-   demo — needs ffmpeg on PATH or `SHOTKIT_FFMPEG`), `--no-build` (reuse an
+   demo — needs ffmpeg on PATH or `TAKE_A_REPO_FFMPEG`), `--no-build` (reuse an
    existing build).
 5. **Read the result** — stdout is exactly one JSON object:
-   `{ "ok": true, "status": "awaiting-approval", "machineStatus": "publish-ready", "outDir": "...", "manifest": "/abs/path/shotkit-manifest.json", "produced": [...] }`.
+   `{ "ok": true, "status": "awaiting-approval", "machineStatus": "publish-ready", "outDir": "...", "manifest": "/abs/path/take-a-repo-manifest.json", "produced": [...] }`.
    Progress logs go to stderr in `--json` mode.
    Read `handoff.automation` for technical repair work and `handoff.approval`
    for the user decision. Do not use the legacy compatibility review summary.
@@ -103,11 +106,11 @@ rendered from the shipped code. By default, it also writes a handoff pack:
 
 ## Notes
 
-- Runs the full-Chromium channel; headless works (`HEADED=0 shotkit …` — verified,
+- Runs the full-Chromium channel; headless works (`TAKE_A_REPO_HEADED=0 take-a-repo …` — verified,
   video included) and is the mode to use in CI. Headed-under-xvfb is
   unreliable on CI runners — don't use it.
 - Scenes are the repo's own config — to change *what* is captured, edit
-  `shotkit.config.js`, not shotkit.
+  `take-a-repo.config.js`, not take-a-repo.
 - `description.from` may point to `STORE_LISTING.md` for copy only or to
   `product.manifest.json` for shared listing + privacy disclosure inputs.
   `privacy-disclosure.md` is a worksheet for store review, not legal policy text.
@@ -125,7 +128,7 @@ rendered from the shipped code. By default, it also writes a handoff pack:
   use `demo.select()` for a native `<select>` because its OS popup is not part
   of the Playwright page screencast.
 - For short-form focus captions, prefer authored timed captions and
-  `captionOptions: { mode: 'focus', appearance: 'outline', wordsPerChunk: 3, wordMs: 360 }`. Shotkit
+  `captionOptions: { mode: 'focus', appearance: 'outline', wordsPerChunk: 3, wordMs: 360 }`. take-a-repo
   animates those words deterministically even when the product demo is silent;
   do not add speech transcription solely to create caption motion. Shorts
   enables this mode by default, while CWS and X stay static unless overridden.
@@ -134,7 +137,7 @@ rendered from the shipped code. By default, it also writes a handoff pack:
   `dense-focus-caption` lint as an agent-owned timing fix, never drop words.
 - Locale typography is a harness contract, not a prompt-only suggestion. Set
   `typography.locale`, `family`, `minFontSize`, `maxFontSize`, `maxLines`, and
-  one or more `fonts[].from` paths. Shotkit preserves authored separators,
+  one or more `fonts[].from` paths. take-a-repo preserves authored separators,
   verifies glyph coverage, embeds and waits for those fonts, then records the
   resolved size and line balance. Fix `caption-locale-missing`,
   `caption-font-not-embedded`, `caption-missing-glyph`,
@@ -146,7 +149,7 @@ rendered from the shipped code. By default, it also writes a handoff pack:
   storyboard warning as an agent-owned config fix and rerun the target.
 - `storyboard.json` carries structured lint (`code`, `severity`, `message`,
   `fix`) for agents. Treat those warnings as the edit list for the next
-  `shotkit.config.js` pass.
+  `take-a-repo.config.js` pass.
 - Use `demos: []` for multiple campaign cuts. Each entry needs a unique `name`
   because it becomes `<name>.webm` and optional `<name>.mp4`; `--scene <name>`
   reruns just that clip.
@@ -154,13 +157,13 @@ rendered from the shipped code. By default, it also writes a handoff pack:
   small `crop` when the UI is too small. Keep storyboard lint on for every
   channel target; `storyboardLint:false` is only for legacy, non-publishing
   smoke clips and produces `needs-fix` for a target.
-- Shotkit is not a timeline editor. It automates the repeatable channel work
+- take-a-repo is not a timeline editor. It automates the repeatable channel work
   (capture, trim, framing, captions, encode, poster frame, QA) and leaves manual
   editors disabled by default. Use manifest roles instead of guessing files.
 - Target workflows default to `automation.manualFallback:false`; manual editor
   recommendations are omitted. Never suggest iMovie, Screen Studio, Canva, or
   manual recapture unless the user explicitly requests a manual fallback.
-- Machine `publish-ready` means the final file passed shotkit's automated story, codec,
+- Machine `publish-ready` means the final file passed take-a-repo's automated story, codec,
   pixel-format, actual-dimension, actual-duration, full-video decode, thumbnail-dimension, nonblank-frame,
   integrity, and channel-profile checks. It is not user approval. Publication
   additionally requires `handoff.approval.publishable:true` and an authorized

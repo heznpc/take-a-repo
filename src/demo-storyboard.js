@@ -131,7 +131,7 @@ function analyzeDemoStoryboard(demoConfig, { viewport, mp4Requested } = {}) {
     warnings.push(storyboardWarning(
       'missing-mp4',
       'X/SNS demo clips should emit mp4',
-      'set demo.mp4 or run shotkit --mp4',
+      'set demo.mp4 or run take-a-repo --mp4',
     ));
   }
   if ((demoConfig.crop || demoConfig.zoom) && captions.length) {

@@ -1,5 +1,5 @@
 /*
- * shotkit — CLI argument parsing, separated from bin/ so it's unit-testable.
+ * take-a-repo — CLI argument parsing, separated from bin/ so it's unit-testable.
  *
  * Agent contract (the reason --json exists): with --json, stdout carries
  * exactly ONE JSON object and all progress logs move to stderr, so a coding
@@ -10,18 +10,21 @@
 const fs = require('fs');
 const path = require('path');
 
-const USAGE = `shotkit — autonomously build and verify launch assets, then gate final user approval
+const USAGE = `take-a-repo — autonomously build and verify launch assets, then gate final user approval
 
-Usage: shotkit [path] [options]
-       shotkit demo <url|dir|file.html> [options]   zero-config proof clip
-                                                    (see: shotkit demo --help)
+Usage: take-a-repo [path] [options]
+       take-a-repo inspect [repo] [--json]       read-only capability discovery
+       take-a-repo status [evidence-outDir] [--json]  rehash the current candidate
+       take-a-repo review [evidence-outDir] [--json]  local user approval page
+       take-a-repo demo <url|dir|file.html> [options]   zero-config proof clip
+                                                    (see: take-a-repo demo --help)
 
 Arguments:
   path              repo to run against (default: current directory);
-                    its shotkit.config.js / store.config.js is used
+                    its take-a-repo.config.js is used
 
 Options:
-  --config <path>   config file (default: shotkit.config.js | store.config.js)
+  --config <path>   config file (default: take-a-repo.config.js)
   --scene <name>    only capture this scene/promoTile/demo/demos entry,
                     "description", or "privacy";
                     repeatable, or comma-separated. When given, nothing else runs.
@@ -38,14 +41,14 @@ Options:
                     also enforces the user's final approval decision.
   --no-video        skip the demo screencast
   --mp4             also convert the demo to H.264 mp4 (needs ffmpeg on PATH
-                    or SHOTKIT_FFMPEG; SNS uploaders want mp4, not webm)
+                    or TAKE_A_REPO_FFMPEG; SNS uploaders want mp4, not webm)
   --no-build        skip the config's build step (use an already-built bundle)
   --live-gt         pass flags.liveGt to config hooks
   --freeze          pass flags.freeze to config hooks
   -h, --help        show this help
 
 Handoff: successful runs also write a self-contained schema-backed pack with
-shotkit-manifest.json as its entrypoint unless the config sets handoff:false.
+take-a-repo-manifest.json as its entrypoint unless the config sets handoff:false.
 
 Exit codes: 0 ok · 1 runtime failure · 2 usage / no config found
 `;
@@ -144,14 +147,11 @@ function parseArgs(argv) {
   return opts;
 }
 
-/** Resolve the config file inside `cwd`: --config wins, else the two defaults. */
+/** Resolve the config file inside `cwd`: --config wins, else take-a-repo.config.js. */
 function resolveConfigPath(explicit, cwd) {
   if (explicit) return path.resolve(cwd, explicit);
-  for (const name of ['shotkit.config.js', 'store.config.js']) {
-    const p = path.join(cwd, name);
-    if (fs.existsSync(p)) return p;
-  }
-  return null;
+  const configPath = path.join(cwd, 'take-a-repo.config.js');
+  return fs.existsSync(configPath) ? configPath : null;
 }
 
 module.exports = { parseArgs, resolveConfigPath, USAGE };

@@ -122,13 +122,13 @@ describe('handoff contract', () => {
       $schema: HANDOFF_SCHEMA_IDS.manifest,
       kind: HANDOFF_KINDS.manifest,
       version: HANDOFF_VERSION,
-      tool: 'shotkit',
+      tool: 'take-a-repo',
       project: { name: 'demo-ext', version: '1.0.0', private: true },
       handoff: {
         contractVersion: HANDOFF_VERSION,
-        entrypoint: 'shotkit-manifest.json',
+        entrypoint: 'take-a-repo-manifest.json',
         schemaFiles: {
-          manifest: 'schemas/shotkit-manifest.schema.json',
+          manifest: 'schemas/take-a-repo-manifest.schema.json',
           storyboard: 'schemas/storyboard.schema.json',
           captions: 'schemas/captions.schema.json',
           approval: 'schemas/approval.schema.json',
@@ -201,14 +201,14 @@ describe('handoff contract', () => {
     expect(paths.map((p) => path.relative(outDir, p))).toEqual([
       'storyboard.json',
       'captions.json',
-      'shotkit-manifest.json',
-      'schemas/shotkit-manifest.schema.json',
+      'take-a-repo-manifest.json',
+      'schemas/take-a-repo-manifest.schema.json',
       'schemas/storyboard.schema.json',
       'schemas/captions.schema.json',
       'schemas/approval.schema.json',
     ]);
     for (const filePath of paths) expect(fs.existsSync(filePath)).toBe(true);
-    const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'shotkit-manifest.json'), 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'take-a-repo-manifest.json'), 'utf8'));
     expect(manifest.assets.map((asset) => asset.role)).toEqual([
       'storyboard-contract',
       'captions-contract',
@@ -287,10 +287,10 @@ describe('handoff contract', () => {
     });
 
     write(false);
-    const firstManifest = JSON.parse(fs.readFileSync(path.join(outDir, 'shotkit-manifest.json'), 'utf8'));
+    const firstManifest = JSON.parse(fs.readFileSync(path.join(outDir, 'take-a-repo-manifest.json'), 'utf8'));
     const originalRunId = firstManifest.assets.find((asset) => asset.id === mp4.id).runId;
     write(true);
-    let manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'shotkit-manifest.json'), 'utf8'));
+    let manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'take-a-repo-manifest.json'), 'utf8'));
     expect(manifest.assets.some((asset) => asset.id === mp4.id)).toBe(true);
     expect(manifest.assets.find((asset) => asset.id === mp4.id)).toMatchObject({
       runId: originalRunId,
@@ -301,7 +301,7 @@ describe('handoff contract', () => {
 
     fs.writeFileSync(mp4Path, 'tampered-video-proof');
     write(true);
-    manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'shotkit-manifest.json'), 'utf8'));
+    manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'take-a-repo-manifest.json'), 'utf8'));
     expect(manifest.assets.find((asset) => asset.id === mp4.id)).toMatchObject({
       state: 'modified',
       observed: { integrity: { algorithm: 'sha256' } },
@@ -314,7 +314,7 @@ describe('handoff contract', () => {
 
     fs.rmSync(mp4Path);
     write(true);
-    manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'shotkit-manifest.json'), 'utf8'));
+    manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'take-a-repo-manifest.json'), 'utf8'));
     expect(manifest.assets.some((asset) => asset.id === mp4.id)).toBe(false);
     expect(manifest.handoff.adapterHints.find((hint) => hint.id === 'screen-studio').readiness).toBe('needs-assets');
   });
@@ -349,7 +349,7 @@ describe('handoff contract', () => {
     fs.writeFileSync(webmPath, 'fresh-webm');
     write([record(webmPath, 'source-demo-webm')], true);
 
-    const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'shotkit-manifest.json'), 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'take-a-repo-manifest.json'), 'utf8'));
     expect(manifest.assets.some((asset) => asset.outPath === 'demo.mp4')).toBe(false);
     expect(manifest.assets.find((asset) => asset.outPath === 'demo.webm')).toMatchObject({ state: 'produced' });
   });
@@ -379,12 +379,12 @@ describe('handoff contract', () => {
     writeHandoffDocs({ ...args, assets: [mp4] });
     const storyboardPath = path.join(outDir, 'storyboard.json');
     const storyboard = JSON.parse(fs.readFileSync(storyboardPath, 'utf8'));
-    storyboard.purpose = 'not-a-shotkit-purpose';
+    storyboard.purpose = 'not-a-take-a-repo-purpose';
     fs.writeFileSync(storyboardPath, JSON.stringify(storyboard));
 
     writeHandoffDocs({ ...args, assets: [], partial: true });
 
-    const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'shotkit-manifest.json'), 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'take-a-repo-manifest.json'), 'utf8'));
     expect(manifest.assets.some((asset) => asset.id === mp4.id)).toBe(false);
   });
 
@@ -447,7 +447,7 @@ describe('handoff contract', () => {
     expect(supademo).toMatchObject({ readiness: 'needs-assets', missingRoles: ['storyboard-content'] });
   });
 
-  test('publishes a schema-valid autonomous target plan without manual adapters', () => {
+  test('rejects forged QA metadata on invalid final media without manual adapters', () => {
     const { cwd, outDir } = tmpProject();
     const { normalizeDemoConfigs } = require('../src/demo');
     const [demo] = normalizeDemoConfigs({
@@ -518,22 +518,22 @@ describe('handoff contract', () => {
       },
     });
 
-    const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'shotkit-manifest.json'), 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'take-a-repo-manifest.json'), 'utf8'));
     expect(manifest.handoff.automation).toMatchObject({
       policy: 'exception-only',
-      status: 'publish-ready',
+      status: 'needs-fix',
       manualFallback: false,
       userActionRequired: false,
-      targets: [{ target: 'x', demo: demo.name, status: 'publish-ready' }],
-      actions: [],
+      targets: [{ target: 'x', demo: demo.name, status: 'needs-fix' }],
+      actions: expect.arrayContaining([expect.objectContaining({ code: 'media-probe-failed' }), expect.objectContaining({ code: 'thumbnail-qa-failed' })]),
     });
     expect(manifest.handoff.adapterHints).toEqual([]);
-    expect(manifest.handoff.summary.publishReadyTargetCount).toBe(1);
+    expect(manifest.handoff.summary.publishReadyTargetCount).toBe(0);
     expect(manifest.handoff.approval).toMatchObject({
-      status: 'awaiting-approval',
-      userActionRequired: true,
+      status: 'not-ready',
+      userActionRequired: false,
       publishable: false,
-      targets: [{ target: 'x', status: 'awaiting-approval' }],
+      targets: [{ target: 'x', status: 'not-ready' }],
     });
     expect(manifest.handoff.summary.approvedTargetCount).toBe(0);
   });

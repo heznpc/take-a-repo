@@ -60,8 +60,8 @@ class FakePage extends EventEmitter {
     if (arg && Object.prototype.hasOwnProperty.call(arg, 'selectedValue')) {
       this.selectMirrorEvents.push({ type: 'commit', value: arg.selectedValue });
     }
-    if (String(fn).includes('__shotkitDemoSelect.hide()')) this.selectMirrorEvents.push({ type: 'hide' });
-    if (String(fn).includes('__shotkitDemoPointer.pulse')) this.pointerPulses += 1;
+    if (String(fn).includes('__takeARepoDemoSelect.hide()')) this.selectMirrorEvents.push({ type: 'hide' });
+    if (String(fn).includes('__takeARepoDemoPointer.pulse')) this.pointerPulses += 1;
   }
 
   async waitForTimeout(ms) {
