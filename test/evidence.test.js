@@ -206,3 +206,13 @@ test('exports exactly approved bytes and detects destination tampering', async (
   expect(() => verifyExportedEvidence({ root: cwd })).toThrow(/export changed/);
   expect(() => exportApprovedEvidence({ ...options, mappings: [{ asset: 'deliverable:proof', destination: '../escape' }] })).toThrow(/contained/);
 });
+
+
+test('records the executed build command and its execution interval', async () => {
+  const spec = config();
+  spec.build = 'node -e "process.stdout.write(\'build proof\')"';
+  const result = await run(spec);
+  const report = evidenceState(result.outDir).report;
+  expect(report.build).toMatchObject({ command: spec.build, exitCode: 0 });
+  expect(Date.parse(report.build.finishedAt)).toBeGreaterThanOrEqual(Date.parse(report.build.startedAt));
+});
