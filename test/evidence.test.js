@@ -164,3 +164,45 @@ test('both lint switches remain visible at the machine contract boundary', () =>
     expect(demoStoryboard({ name: 'example', ...flags }, { width: 1280, height: 720 }).lintEnabled).toBe(false);
   }
 });
+
+test('source and build changes invalidate an otherwise intact current candidate', async () => {
+  fs.mkdirSync(path.join(cwd, 'src'));
+  fs.writeFileSync(path.join(cwd, 'src/code.js'), 'source');
+  fs.writeFileSync(path.join(cwd, 'bundle.js'), 'build');
+  const spec = config();
+  spec.evidence.inputs = ['src'];
+  spec.evidence.buildOutputs = ['bundle.js'];
+  const result = await run(spec);
+  expect(evidenceState(result.outDir).status).toBe('awaiting-approval');
+  fs.writeFileSync(path.join(cwd, 'src/new.js'), 'new untracked input');
+  expect(evidenceState(result.outDir)).toMatchObject({ publishable: false, problems: [{ code: 'source-changed-recapture-required' }] });
+  fs.unlinkSync(path.join(cwd, 'src/new.js'));
+  fs.writeFileSync(path.join(cwd, 'bundle.js'), 'new build, same version');
+  expect(evidenceState(result.outDir)).toMatchObject({ publishable: false, problems: [{ code: 'build-changed-recapture-required' }] });
+});
+
+test('input mutation during a producer and no-build cannot pass freshness', async () => {
+  fs.writeFileSync(path.join(cwd, 'source'), 'before');
+  const spec = config();
+  spec.evidence.inputs = ['source'];
+  spec.evidence.producers[0].command = [process.execPath, '-e', "require('fs').writeFileSync('source','after'); require(process.argv[1])", collector, 'cli'];
+  expect((await run(spec)).machineStatus).toBe('needs-fix');
+  spec.build = 'echo build';
+  const skipped = await run(spec, { noBuild: true });
+  expect(evidenceState(skipped.outDir).report.actions).toEqual(expect.arrayContaining([expect.objectContaining({ fix: expect.stringContaining('requires a fresh build') })]));
+});
+
+test('exports exactly approved bytes and detects destination tampering', async () => {
+  const { exportApprovedEvidence, verifyExportedEvidence } = require('../src/evidence-export');
+  const result = await run();
+  const options = { outDir: result.outDir, root: cwd, mappings: [{ asset: 'deliverable:proof', destination: 'site/proof.html' }] };
+  expect(() => exportApprovedEvidence(options)).toThrow(/approval/);
+  const state = evidenceState(result.outDir);
+  // Synthetic fixture decision only; product approval is always a human action.
+  write(path.join(state.runDir, 'review.json'), { status: 'approved', reviewDigest: state.reviewDigest });
+  const exported = exportApprovedEvidence(options);
+  expect(verifyExportedEvidence({ root: cwd })).toEqual(exported);
+  fs.appendFileSync(path.join(cwd, 'site/proof.html'), 'changed');
+  expect(() => verifyExportedEvidence({ root: cwd })).toThrow(/export changed/);
+  expect(() => exportApprovedEvidence({ ...options, mappings: [{ asset: 'deliverable:proof', destination: '../escape' }] })).toThrow(/contained/);
+});

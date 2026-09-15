@@ -71,6 +71,7 @@ const {
 } = require('./demo');
 
 module.exports = {
+  ...require('./evidence-export'),
   fingerprintInputs: require('./evidence-inputs').fingerprintInputs,
   evidenceState: require('./evidence-state').evidenceState,
   capture,

@@ -197,3 +197,62 @@ A consumer can explicitly adopt this completion rule in its AGENTS.md:
 The skill plus consumer rule is the discovery/trigger mechanism. It does not
 guarantee that an unconfigured LLM will discover a GitHub/npm repository. Do not
 add marketing capture to unrelated work just because the tool is installed.
+
+## Source/build freshness (opt in for release capture)
+
+Declare `evidence.inputs` (relative files/directories, including scenario helpers,
+fixtures, config, lockfile and installed engine source) and `evidence.buildOutputs`
+(the actual built product). The engine hashes sorted paths and bytes, including
+untracked files and additions/deletions inside each declared directory. Missing
+inputs and symlinks fail closed. Keep output directories out of inputs.
+
+Inputs are measured before the build, build outputs after it, and both are checked
+again after capture. `--no-build` cannot create a release candidate when a build
+and inputs are declared. `status` and review remeasure the same trees; changed or
+missing source/build requires recapture, even when the version string is unchanged.
+A copied review pack still allows file inspection, but cannot be approved on a
+machine without its declared source/build inputs. Declare all transitive inputs:
+undeclared external dependencies are outside this freshness guarantee.
+
+`fingerprintInputs(root, paths)` and `evidenceState(outDir)` are public APIs for
+consumer-specific loaded-bundle observations and approved asset handoff. Consumers
+must record the actual runtime version and staged bundle separately when fixture
+patches change the production build. Version equality alone is insufficient.
+
+## Migration and platform boundary
+
+Canonical package, binary, config, environment prefix, schemas and skills use
+`take-a-repo`. Historical changelog/research records retain their original names.
+The Git remote remains `heznpc/shotkit` until a separately approved repository
+rename; links to that existing destination are intentional. No implicit fallback
+to a former npm name or old output manifest is provided. Consumers may keep an
+explicit deprecated wrapper that forwards to the current evidence pipeline.
+
+Currently implemented: browser/extension capture; executable CLI/API producers;
+native producer contract and runnable macOS AppKit fixture. Native media use the
+same hashing, decoding, claim checks, channel rendering and whole-set review.
+Design intent: let product-owned platform drivers supply actual observations.
+iOS/Android simulators, physical devices, desktop UI and remote services can be
+covered by those drivers; they are not built-in or verified merely by selecting
+`kind: native`. Planned: no additional platform driver is promised by this change.
+Non-goals: substitute web mockups for native apps, fabricate service responses as
+live evidence, or become a timeline editor. Redacted: private service/account data
+must stay outside delivered evidence. Audio/JPEG ingestion and generic native
+action DSLs are not implemented.
+
+Approved handoff: `exportApprovedEvidence({ outDir, root, mappings, receipt })`
+requires a currently approved complete candidate and copies selected asset bytes
+without transforms. A mapping uses `producer-id:asset-id` (or
+`deliverable:asset-id`) and a contained relative destination. The receipt is
+invalidated before writes and committed last with run ID, review digest and file
+hashes. `verifyExportedEvidence({ root, receipt })` detects later changes before a
+consumer builds/uploads those files. This function verifies the export receipt;
+it is not a new authorization to publish, and does not re-evaluate source freshness
+on an already exported release. Re-run capture/status for a new product build.
+
+Extension paths for future producers (official references checked 2026-09-15):
+[Appium platform drivers](https://appium.io/docs/en/2.12/ecosystem/drivers/) cover
+native iOS, Android and desktop through separate driver installations. Playwright
+labels its [Electron](https://playwright.dev/docs/api/class-electron) and
+[Android Chrome/WebView](https://playwright.dev/docs/api/class-android) adapters
+experimental. These are integration candidates, not claimed take-a-repo support.

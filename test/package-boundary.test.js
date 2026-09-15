@@ -63,6 +63,7 @@ describe('npm package boundary', () => {
       'demoStoryboard',
       'ensureDemoCaptionOverlay',
       'evidenceState',
+      'exportApprovedEvidence',
       'extractListing',
       'extractPrivacyDisclosure',
       'extractProductListing',
@@ -98,6 +99,7 @@ describe('npm package boundary', () => {
       'stageExtension',
       'startCalibrator',
       'updateCalibrationProfile',
+      'verifyExportedEvidence',
       'writeHandoffDocs',
     ]);
   });
