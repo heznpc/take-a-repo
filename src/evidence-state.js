@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { safeAssetPath, sha256File, readJsonIfExists } = require('./handoff-files');
+const { fingerprintInputs } = require('./evidence-inputs');
 const { digest } = require('./evidence-contract');
 
 function evidenceState(outDir) {
@@ -23,6 +24,15 @@ function evidenceState(outDir) {
       const target = safeAssetPath(runDir, { outPath: asset.path });
       if (!target || sha256File(target) !== asset.sha256) throw new Error('digest mismatch');
     } catch (_error) { problems.push({ code: 'asset-integrity-mismatch', path: asset.path }); }
+  }
+  if (report.freshness) {
+    const root = path.resolve(outDir, report.freshness.root);
+    for (const [kind, expected] of [['source', report.freshness], ['build', report.buildFingerprint]]) {
+      if (!expected) continue;
+      try {
+        if (fingerprintInputs(root, expected.inputs).digest !== expected.digest) problems.push({ code: `${kind}-changed-recapture-required` });
+      } catch (error) { problems.push({ code: `${kind}-unavailable`, error: error.message }); }
+    }
   }
   const reviewDigest = digest(`${pointer.sha256}:${report.assetSetDigest}`);
   const decision = readJsonIfExists(path.join(runDir, 'review.json'));

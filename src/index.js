@@ -71,6 +71,8 @@ const {
 } = require('./demo');
 
 module.exports = {
+  fingerprintInputs: require('./evidence-inputs').fingerprintInputs,
+  evidenceState: require('./evidence-state').evidenceState,
   capture,
   DEFAULT_VIEWPORT,
   // zero-config demo

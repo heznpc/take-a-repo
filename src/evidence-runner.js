@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { validateEvidenceConfig, digest } = require('./evidence-contract');
+const { fingerprintInputs } = require('./evidence-inputs');
 const { provenance, runProducer, execute } = require('./evidence-producer');
 const { renderDeliverable } = require('./evidence-render');
 const { withRunSession } = require('./run-session');
@@ -47,11 +48,16 @@ async function captureEvidence(config, opts = {}) {
     if (previous?.id) report.previousRunId = previous.id;
     writeJson(pointer, { version: 1, id, state: 'running', run: `runs/${id}/run.json` });
     try {
+      if (spec.inputs) {
+        report.freshness = { root: path.relative(outDir, cwd), ...fingerprintInputs(cwd, spec.inputs) };
+        if (opts.noBuild && config.build) throw new Error('evidence with declared inputs requires a fresh build');
+      }
       if (config.build && !opts.noBuild) {
         // Same committed-command trust boundary as legacy config.build.
         report.build = await execute(process.platform === 'win32' ? ['cmd', '/c', config.build] : ['/bin/sh', '-c', config.build], { cwd, outDir: runDir });
         if (report.build.exitCode !== 0 || report.build.error) throw new Error(`build failed: ${report.build.error || report.build.exitCode}`);
       }
+      if (spec.buildOutputs) report.buildFingerprint = fingerprintInputs(cwd, spec.buildOutputs);
       for (const producer of spec.producers) {
         if (scenes.length && !scenes.includes(producer.id)) continue;
         log(`collect ${producer.kind}: ${producer.id}`);
@@ -80,6 +86,8 @@ async function captureEvidence(config, opts = {}) {
         if (file.sha256 && file.sha256 !== sha256) throw new Error(`asset changed after QA: ${file.path}`);
         return { ...file, sha256, bytes: fs.statSync(path.join(runDir, file.path)).size };
       });
+      if (report.freshness && fingerprintInputs(cwd, spec.inputs).digest !== report.freshness.digest) throw new Error('capture inputs changed during execution; recapture');
+      if (report.buildFingerprint && fingerprintInputs(cwd, spec.buildOutputs).digest !== report.buildFingerprint.digest) throw new Error('build changed during execution; recapture');
       report.machineStatus = report.actions.length ? 'needs-fix' : 'publish-ready';
     } catch (error) {
       report.actions.push({ code: 'run-failed', owner: 'agent', fix: error.message });
