@@ -223,9 +223,9 @@ patches change the production build. Version equality alone is insufficient.
 
 Canonical package, binary, config, environment prefix, schemas and skills use
 `take-a-repo`. Historical changelog/research records retain their original names.
-The Git remote remains `heznpc/shotkit` until a separately approved repository
-rename; links to that existing destination are intentional. No implicit fallback
-to a former npm name or old output manifest is provided. Consumers may keep an
+The canonical GitHub repository and Git remote are `heznpc/take-a-repo`.
+The former `heznpc/shotkit` URL redirects to it. No implicit fallback to a
+former npm name or old output manifest is provided. Consumers may keep an
 explicit deprecated wrapper that forwards to the current evidence pipeline.
 
 Currently implemented: browser/extension capture; executable CLI/API producers;
