@@ -18,7 +18,10 @@
     "skills/capture",
     "skills/demo",
     "skills/launch-proof",
-    "examples/evidence",
+    "examples/evidence/*.js",
+    "examples/evidence/native/Proof.swift",
+    "examples/evidence/native/take-a-repo.config.js",
+    "examples/evidence/native/script",
     "docs/evidence.md",
     "docs/handoff-conventions.md",
     "schemas"

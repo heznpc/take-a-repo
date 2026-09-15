@@ -68,6 +68,7 @@ for (const relpath of requiredFiles) {
 }
 
 for (const packedPath of packedPaths) {
+  assert.ok(!/(product-evidence|\.app\/|execution\.log)/.test(packedPath), `generated execution evidence must not ship: ${packedPath}`);
   assert.ok(
     /^(package\.json|README\.md|README\.ko\.md|LICENSE|src\/|bin\/|calibrator\/|campaign\/|skills\/capture\/|skills\/demo\/|skills\/launch-proof\/|examples\/evidence\/|docs\/(handoff-conventions|evidence)\.md|schemas\/)/.test(packedPath),
     `unexpected file in npm pack output: ${packedPath}`,
