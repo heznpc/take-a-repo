@@ -54,7 +54,11 @@ async function captureEvidence(config, opts = {}) {
       }
       if (config.build && !opts.noBuild) {
         // Same committed-command trust boundary as legacy config.build.
-        report.build = await execute(process.platform === 'win32' ? ['cmd', '/c', config.build] : ['/bin/sh', '-c', config.build], { cwd, outDir: runDir });
+        report.build = {
+          command: config.build, startedAt: new Date().toISOString(),
+          ...await execute(process.platform === 'win32' ? ['cmd', '/c', config.build] : ['/bin/sh', '-c', config.build], { cwd, outDir: runDir }),
+          finishedAt: new Date().toISOString(),
+        };
         if (report.build.exitCode !== 0 || report.build.error) throw new Error(`build failed: ${report.build.error || report.build.exitCode}`);
       }
       if (spec.buildOutputs) report.buildFingerprint = fingerprintInputs(cwd, spec.buildOutputs);
