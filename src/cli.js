@@ -16,7 +16,7 @@ Usage: take-a-repo [path] [options]
        take-a-repo inspect [repo] [--json]       read-only capability discovery
        take-a-repo status [evidence-outDir] [--json]  rehash the current candidate
        take-a-repo review [evidence-outDir] [--json]  local user approval page
-       take-a-repo production <plan|run|edit|status> [repo] [--json]
+       take-a-repo production <plan|run|observe|context|edit|status> [repo] [--json]
                                                     saved project + incremental reuse
        take-a-repo demo <url|dir|file.html> [options]   zero-config proof clip
                                                     (see: take-a-repo demo --help)
