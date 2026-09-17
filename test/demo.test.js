@@ -238,12 +238,12 @@ describe('lintDemoStoryboard', () => {
     expect(analyzeDemoStoryboard(demoConfig, { viewport: { width: 1200, height: 675 }, mp4Requested: false }))
       .toEqual(expect.arrayContaining([
         expect.objectContaining({
-          code: 'late-first-caption',
+          code: 'missing-mp4',
           severity: 'warning',
-          fix: 'show the result sooner',
+          fix: 'set demo.mp4 or run take-a-repo --mp4',
         }),
         expect.objectContaining({
-          code: 'missing-safety-restore',
+          code: 'odd-viewport',
         }),
       ]));
     expect(lintDemoStoryboard(demoConfig, { viewport: { width: 1200, height: 675 }, mp4Requested: false })[0])
@@ -274,9 +274,7 @@ describe('lintDemoStoryboard', () => {
       ],
     }, { viewport: { width: 1280, height: 720 }, mp4Requested: true });
 
-    expect(warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: 'no-captions' }),
-    ]));
+    expect(warnings).toEqual([]); // Caption count cannot establish a visual story.
   });
 
   test('measures the first retained caption relative to trim.start', () => {
@@ -365,13 +363,10 @@ describe('lintDemoStoryboard', () => {
       captions: [{ at: 4, text: 'This caption is intentionally long enough to trigger the short-caption guidance for social clips' }],
     }, { viewport: { width: 1200, height: 675 }, mp4Requested: false });
 
-    expect(warnings.join('\n')).toMatch(/only one caption/);
-    expect(warnings.join('\n')).toMatch(/first caption starts after 3s/);
     expect(warnings.join('\n')).toMatch(/caption is/);
-    expect(warnings.join('\n')).toMatch(/no visible safety\/restore/);
     expect(warnings.join('\n')).toMatch(/should emit mp4/);
     expect(warnings.join('\n')).toMatch(/not even/);
-    expect(warnings.join('\n')).toMatch(/under 20s/);
+    expect(warnings.join('\n')).not.toMatch(/under 20s/);
   });
 });
 

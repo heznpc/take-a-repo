@@ -83,6 +83,7 @@ async function runProduction(config, opts = {}) {
       if (state?.id === p.previous.report.id && state.problems?.length === 0 && state.machineStatus === 'publish-ready') return {
         outDir, manifest: p.previous.manifest, produced: [], status: state.status, machineStatus: state.machineStatus,
         exitCode: 0, reusedCandidate: true, plan, metrics: { modelCalls: 0, executedProducers: 0, reusedProducers: p.producers.length, renderedDeliverables: 0, reusedDeliverables: p.effective.evidence.deliverables.length },
+        editorialReview: state.editorialReview, nextActions: state.actions,
       };
     }
     const reference = projectReference(outDir, p.project);

@@ -88,7 +88,15 @@ rendered from the shipped code. By default, it also writes a handoff pack:
      `--attempt 2`. Repeat through `automation.maxAttempts`.
    - `blocked`: automated attempts are exhausted. Report only the concrete
      technical blocker and attempted fixes; ask for technical input.
-   - `awaiting-approval`: technical QA passed. Open the Campaign Dashboard and
+   - Before presenting any video, inspect the final composite against its
+     audience, objective and beat intent: evidence, composition, legibility,
+     pacing and continuity. Caption pixels and codec checks cannot judge those.
+     In evidence/production configs, author `editorial` and run
+     `production review-context`, then `production review --report <json>` with
+     inspected frame references and timestamped findings. `editorial-review-required`
+     means agent work remains; another identical render does not resolve it.
+     See `docs/evidence.md` for the report contract and detail sampling.
+   - `awaiting-approval`: technical QA and agent critique passed. Open the Campaign Dashboard and
      present the rendered candidate to the user. Keep the Calibrator under
      Advanced for agent-owned composition work. Do not approve on the user's behalf.
    - `changes-requested`: read the digest-bound decision note, implement it as
@@ -117,7 +125,9 @@ rendered from the shipped code. By default, it also writes a handoff pack:
 - CWS assets and SNS demo clips have different jobs. For X/SNS clips, prefer
   `demo.preset: 'sns-video'` (`1280×720`), `demo.mp4: { crf: 18 }`, 20-40
   seconds, short captions, first-result-within-3-seconds, and a
-  before → action → result → safety/restore story. Use `sns-twitter`
+  story that demonstrates the requested behavior. These are recommendations;
+  do not pad short cuts or force safety/restore copy without a visible reason.
+  Use `sns-twitter`
   (`1200×675`) for static X card images.
 - Demo configs can use timed `demo.captions` plus the helper passed to
   `demo.run`: `demo.caption(text)`, `demo.step(text, async () => { ... })`,
@@ -135,6 +145,10 @@ rendered from the shipped code. By default, it also writes a handoff pack:
   The resolved style is recorded in both caption and storyboard handoff docs;
   `captions.json` also carries the trim-relative rendered `timeline[]`. Treat a
   `dense-focus-caption` lint as an agent-owned timing fix, never drop words.
+  Use `focusChunks` to preserve semantic phrases and optional `focusCues` to
+  emphasize an authored word at the relevant event. `word:null` releases emphasis
+  during a product-reading hold. Choose a stable caption lane from actual frames,
+  not an arbitrary universal bottom offset.
 - Locale typography is a harness contract, not a prompt-only suggestion. Set
   `typography.locale`, `family`, `minFontSize`, `maxFontSize`, `maxLines`, and
   one or more `fonts[].from` paths. take-a-repo preserves authored separators,
@@ -163,7 +177,7 @@ rendered from the shipped code. By default, it also writes a handoff pack:
 - Target workflows default to `automation.manualFallback:false`; manual editor
   recommendations are omitted. Never suggest iMovie, Screen Studio, Canva, or
   manual recapture unless the user explicitly requests a manual fallback.
-- Machine `publish-ready` means the final file passed take-a-repo's automated story, codec,
+- Machine `publish-ready` means the final file passed take-a-repo's caption timing, codec,
   pixel-format, actual-dimension, actual-duration, full-video decode, thumbnail-dimension, nonblank-frame,
   integrity, and channel-profile checks. It is not user approval. Publication
   additionally requires `handoff.approval.publishable:true` and an authorized

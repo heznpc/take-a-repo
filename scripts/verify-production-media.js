@@ -15,6 +15,8 @@ const { verifyCaptionTrack } = require('../src/production-caption-qa');
 const { createDemoController, installDemoCaptionOverlay } = require('../src/demo');
 const { analyzeDemoCaptionMetrics } = require('../src/demo-caption-qa');
 const { findFfmpeg, ffmpegTimeoutMs } = require('../src/video');
+const { reviewContext, recordEditorialReview } = require('../src/production-review');
+const { REVIEW_CRITERIA } = require('../src/editorial');
 
 async function main() {
   const bin = findFfmpeg();
@@ -39,6 +41,9 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
         reuse: { mode: 'local-inputs', inputs: ['collect.js', 'source.mp4'], maxAgeSeconds: 3600 } }],
       claims: [{ id: 'recorded', text: 'Synthetic source recorded', checks: ['fixture:recorded'] }],
       deliverables: [{ id: 'demo', kind: 'video', source: 'fixture:video', channel: 'youtube-shorts', fit: 'contain', claims: ['recorded'],
+        trim: { start: 0, duration: 8 },
+        editorial: { objective: 'Verify synthetic caption composition', audience: 'Harness test runner', rationale: 'Regression fixture only, not a production quality claim',
+          beats: [{ id: 'test', role: 'proof', start: 0, end: 8, subject: 'Caption overlay', expectedChange: 'Authored frames appear and disappear', attention: 'Glyphs and safe lane', holdReason: 'Exercise boundaries and empty intervals' }] },
         captions: [{ id: 'intro', start: 0, end: 3, text: 'W'.repeat(240), fontSize: 42 }] }],
     } };
     const opts = { cwd, log: () => {} };
@@ -49,6 +54,10 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
     assert.equal(planProduction(config, opts).producers[0].action, 'reuse');
     await observeProduction(config, opts);
     assert.equal(productionContext(config, { ...opts, maxFrames: 2 }).frames.length, 2);
+    const detail = productionContext(config, { ...opts, from: 0.3, to: 1.5, resample: true, maxFrames: 2, width: 640 });
+    assert.equal(detail.coverage.resampled, true);
+    assert.equal(detail.frames[0].width, 320, 'source detail never upscales');
+    assert.equal(detail.frames[0].atSeconds, 1, 'sparse source reports decoded time, not requested 0.3s');
 
     const captions = [
       { id: 'intro', start: 0.2, end: 0.8, text: 'Restore' },
@@ -77,6 +86,18 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
     assert.ok(sample(1).every((value) => value < 40), 'caption disappears between intervals');
     assert.notDeepEqual(sample(1.2), sample(1.4), 'shared word-pop animation moves within a word');
     assert.notDeepEqual(sample(1.5), sample(1.8), 'active word changes');
+    assert.equal(evidenceState(repaired.outDir).editorialReview.status, 'pending');
+    assert.equal(evidenceState(repaired.outDir).humanApprovalReady, false);
+    const review = reviewContext(config, { ...opts, maxFrames: 4 });
+    assert.equal(review.video.path, video, 'critique inspects the final composition');
+    assert.equal(review.frames[0].width, 720, 'portrait review keeps native width');
+    const again = reviewContext(config, { ...opts, maxFrames: 4 });
+    assert.deepEqual(again.frames.map((f) => f.path), review.frames.map((f) => f.path), 'detail cache reused');
+    // Test-only simulated reviewer. The engine never creates passing verdicts.
+    await recordEditorialReview(config, { reviewDigest: review.reviewDigest, deliverables: [{ id: 'demo', contexts: [review.contextId],
+      checks: REVIEW_CRITERIA.map((criterion) => ({ criterion, status: 'pass', reason: 'Synthetic integration test reviewer', frames: review.frames.map((f) => f.id) })) }] }, opts);
+    assert.equal(evidenceState(repaired.outDir).humanApprovalReady, true);
+    assert.equal(evidenceState(repaired.outDir).publishable, false, 'agent critique never grants user approval');
 
     // A damaged derived output must not cause another product execution.
     fs.unlinkSync(path.join(runDir, 'deliverables/demo.png'));
@@ -87,11 +108,16 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
     assert.equal(recovered.machineStatus, 'publish-ready');
 
     // Styles are effective, and ordinary capture honors the saved edit too.
-    config.evidence.deliverables[0].captionOptions = { activeColor: '#00ff00', bottomOffset: 430, wordsPerChunk: 1 };
+    await editProduction(config, { baseRevision: 2, operations: [{ deliverable: 'demo', set: {
+      captionOptions: { activeColor: '#00ff00', bottomOffset: 430, wordsPerChunk: 1 },
+      captions: [captions[0], { ...captions[1], focusCues: [{ at: 0, chunk: 0, word: 2 }, { at: 0.8, chunk: 0, word: null }] }],
+    } }] }, opts);
     const restyled = await runProduction(config, opts);
     assert.equal(restyled.machineStatus, 'publish-ready');
+    assert.equal(evidenceState(restyled.outDir).editorialReview.status, 'pending', 'new composition needs a fresh critique');
     const restyledTimeline = JSON.parse(fs.readFileSync(path.join(path.dirname(restyled.manifest), 'deliverables/demo-captions/timeline.json')));
     assert.ok(restyledTimeline.frames.some((frame) => frame.text === 'Keep original footage' && frame.activeWordIndex === 2), 'authored phrases override word-count chunking in the rendered track');
+    assert.ok(restyledTimeline.frames.some((frame) => frame.at === 2 && frame.activeWordIndex === null), 'authored cue releases emphasis at the requested output time');
     const restyledVideo = path.join(path.dirname(restyled.manifest), 'deliverables/demo.mp4');
     assert.notEqual(sha256File(video), sha256File(restyledVideo));
     const ordinary = await capture(config, opts);
@@ -118,7 +144,7 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
         assert.deepEqual(analyzeDemoCaptionMetrics(demo.captionMetrics()), []);
       } finally { demo.stop(); }
     } finally { await browser.close(); }
-    console.log(JSON.stringify({ ok: true, checks: ['low-fps caption timing', 'decoded caption presence', 'first-render source reuse', 'failed-render observations', 'approval remains required', 'scheduled hide', 'shared focus motion', 'style changes', 'ordinary capture parity', 'poster repair without recapture'], captionQA: measured.qa.captions }));
+    console.log(JSON.stringify({ ok: true, checks: ['low-fps caption timing', 'decoded caption presence', 'first-render source reuse', 'failed-render observations', 'source detail resampling', 'final composite review and cache', 'approval remains required', 'scheduled hide', 'shared focus motion', 'saved style and authored cues', 'ordinary capture parity', 'poster repair without recapture'], captionQA: measured.qa.captions }));
   } finally {
     if (process.env.TAKE_A_REPO_TEST_KEEP) console.error(`Retained media fixture: ${cwd}`);
     else fs.rmSync(cwd, { recursive: true, force: true });

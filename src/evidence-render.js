@@ -54,10 +54,10 @@ function renderDeliverable(spec, report, runDir) {
   const measured = measureAsset(runDir, { id: spec.id, path: path.relative(runDir, video), mediaType: 'video/mp4', role: 'recording', captionState: input.captionState || 'unknown' });
   const qa = measured.qa;
   if (qa.codec !== 'h264' || qa.pixelFormat !== 'yuv420p' || qa.width !== width || qa.height !== height
-    || qa.durationSeconds < profile.recommendedDurationSeconds.min || qa.durationSeconds > profile.recommendedDurationSeconds.max) {
-    throw new Error(`channel QA failed: expected H.264 ${width}x${height}, ${profile.recommendedDurationSeconds.min}-${profile.recommendedDurationSeconds.max}s`);
+    || qa.durationSeconds <= 0 || qa.durationSeconds > profile.maximumDurationSeconds) {
+    throw new Error(`channel QA failed: expected H.264 ${width}x${height}, 0 < duration <= ${profile.maximumDurationSeconds}s`);
   }
-  execFileSync(bin, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-ss', String(spec.thumbnail?.at ?? profile.thumbnail.at), '-i', video, '-frames:v', '1', poster], options);
+  execFileSync(bin, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-ss', String(spec.thumbnail?.at ?? Math.min(profile.thumbnail.at, qa.durationSeconds / 2)), '-i', video, '-frames:v', '1', poster], options);
   const thumbnail = measureAsset(runDir, { id: `${spec.id}-poster`, path: path.relative(runDir, poster), mediaType: 'image/png', role: 'screenshot' });
   return [measured, thumbnail];
 }

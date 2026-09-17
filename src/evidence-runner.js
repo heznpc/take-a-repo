@@ -126,12 +126,17 @@ async function captureEvidence(config, opts = {}) {
     if (report.actions.length && attempt >= maxAttempts) report.machineStatus = 'blocked';
     report.automation = { attempt, maxAttempts, retryScenes: [...new Set(report.actions.flatMap((a) => a.retryScenes || []))], userActionRequired: report.machineStatus === 'blocked' };
     report.assetSetDigest = digest(JSON.stringify(report.files.map((f) => [f.path, f.sha256]).sort((a, b) => a[0].localeCompare(b[0]))));
+    report.editorialReviewRequired = report.deliverables.some((d) => d.kind === 'video');
     const manifest = path.join(runDir, 'run.json');
     writeJson(manifest, report);
     writeJson(pointer, { version: 1, id, state: 'completed', run: `runs/${id}/run.json`, sha256: sha256File(manifest) });
-    const status = report.machineStatus === 'publish-ready' ? 'awaiting-approval' : report.machineStatus;
+    // The run-session marker is still running until this callback returns.
+    const editorialReview = { status: report.editorialReviewRequired ? 'pending' : 'not-required', authority: 'agent-review-only' };
+    const status = report.machineStatus === 'publish-ready' ? (report.editorialReviewRequired ? 'needs-fix' : 'awaiting-approval') : report.machineStatus;
+    const nextActions = [...report.actions, ...(report.machineStatus === 'publish-ready' && report.editorialReviewRequired
+      ? [{ code: 'editorial-review-required', owner: 'agent', fix: 'Inspect production review-context, then record production review --report before presenting for approval.' }] : [])];
     log(`evidence ${id}: ${status}`);
-    return { produced: [manifest, ...report.files.map((f) => path.join(runDir, f.path))], outDir, manifest, status, machineStatus: report.machineStatus, exitCode: report.actions.length ? 1 : 0 };
+    return { produced: [manifest, ...report.files.map((f) => path.join(runDir, f.path))], outDir, manifest, status, machineStatus: report.machineStatus, editorialReview, nextActions, exitCode: report.actions.length ? 1 : 0 };
   }, { projectToken: opts.production?.projectToken });
 }
 

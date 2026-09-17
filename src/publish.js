@@ -84,17 +84,10 @@ function targetPublishPlan({ demo, lint, assets, skipped }) {
           `duration ${media.durationSeconds.toFixed(2)}s exceeds ${profile.maximumDurationSeconds}s`,
           `shorten trim.duration for target ${profile.id}`,
         );
-      } else if (
-        media.durationSeconds < profile.recommendedDurationSeconds.min
-        || media.durationSeconds > profile.recommendedDurationSeconds.max
-      ) {
-        fail(
-          'story-duration-outside-target',
-          `duration ${media.durationSeconds.toFixed(2)}s is outside ${profile.recommendedDurationSeconds.min}-${profile.recommendedDurationSeconds.max}s`,
-          `adjust story pacing or trim.duration for target ${profile.id}`,
-        );
+      } else if (!(media.durationSeconds > 0)) {
+        fail('invalid-media-duration', 'video has no playable duration', 'render a nonempty clip');
       } else {
-        pass('story-duration', `duration ${media.durationSeconds.toFixed(2)}s is in target range`);
+        pass('story-duration', `duration ${media.durationSeconds.toFixed(2)}s is within the channel limit; pacing needs editorial review`);
       }
     }
   }

@@ -1,4 +1,5 @@
-const CAPTION_ROLES = new Set(['result', 'action', 'proof', 'safety', 'restore', 'cta']);
+const { CAPTION_FIELDS, CAPTION_ROLES: roles } = require('./editorial');
+const CAPTION_ROLES = new Set(roles);
 
 function normalizeDelayMs(value, label) {
   if (!Number.isFinite(value) || value < 0) {
@@ -51,8 +52,7 @@ function normalizeDemoCaptions(captions = []) {
       return {
         atMs: parseTimeToMs(caption.at, `at for captions[${index}]`),
         text: String(caption.text),
-        ...(caption.focusChunks === undefined ? {} : { focusChunks: caption.focusChunks }),
-        ...(caption.role == null ? {} : { role: caption.role }),
+        ...Object.fromEntries(CAPTION_FIELDS.filter((key) => caption[key] !== undefined).map((key) => [key, caption[key]])),
       };
     })
     .sort((a, b) => a.atMs - b.atMs);

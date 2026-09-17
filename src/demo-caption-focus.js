@@ -164,6 +164,33 @@ function authoredCaptionChunks(caption, segments) {
 }
 
 function buildFocusCaptionFrames(caption, segments, chunks, nextAtMs, focus, typography) {
+  if (caption.focusCues !== undefined) {
+    const cues = caption.focusCues;
+    if (!caption.focusChunks || !Array.isArray(cues) || !cues.length || cues.length > 80) throw new Error('focusCues requires authored focusChunks and 1..80 cues');
+    let previousMs = -1, previousChunk = 0;
+    const frames = cues.map((cue, index) => {
+      const chunk = chunks[cue?.chunk];
+      const offset = Math.round(cue?.at * 1000);
+      if (!cue || Object.keys(cue).some((key) => !['at', 'chunk', 'word'].includes(key))
+        || !Number.isFinite(cue.at) || !Number.isInteger(cue.chunk) || !chunk
+        || offset < 0 || offset <= previousMs || caption.atMs + offset >= nextAtMs
+        || (index === 0 && (offset !== 0 || cue.chunk !== 0))
+        || cue.chunk < previousChunk || cue.chunk > previousChunk + 1
+        || (cue.word !== null && (!Number.isInteger(cue.word) || cue.word < 0 || cue.word >= chunk.items.length))) {
+        throw new Error('focusCues requires ordered in-range times, consecutive chunks and a word index or null');
+      }
+      previousMs = offset; previousChunk = cue.chunk;
+      return focusFrame(caption, caption.atMs + offset, chunkCaptionSegments(segments, chunk.start, chunk.items.length), cue.word, typography);
+    });
+    if (previousChunk !== chunks.length - 1) throw new Error('focusCues must show every authored phrase');
+    for (let index = 0; index < chunks.length; index++) {
+      const first = cues.find((cue) => cue.chunk === index);
+      const next = cues.find((cue) => cue.chunk === index + 1);
+      const available = (next ? next.at * 1000 : nextAtMs - caption.atMs) - first.at * 1000;
+      if (available + 0.01 < chunks[index].items.length * focus.wordMs) throw new Error('dense-focus-caption: allow reading time for each authored phrase');
+    }
+    return frames;
+  }
   const availableMs = nextAtMs - caption.atMs;
   const hasBoundary = Number.isFinite(availableMs);
   const desiredMs = segments.length * focus.wordMs;
@@ -173,7 +200,7 @@ function buildFocusCaptionFrames(caption, segments, chunks, nextAtMs, focus, typ
     cadenceMs = Math.floor(availableMs / segments.length);
   }
   if (!hasBoundary || cadenceMs >= MIN_FOCUS_FRAME_MS) {
-    return segments.map((_segment, wordIndex) => {
+    const frames = segments.map((_segment, wordIndex) => {
       const chunk = chunks.find((candidate) => (
         wordIndex >= candidate.start && wordIndex < candidate.start + candidate.items.length
       ));
@@ -185,6 +212,13 @@ function buildFocusCaptionFrames(caption, segments, chunks, nextAtMs, focus, typ
         typography,
       );
     });
+    // Emphasis has a bounded purpose. Release it during a long product hold.
+    const neutralAt = caption.atMs + segments.length * cadenceMs;
+    if (Number.isFinite(nextAtMs) && nextAtMs - neutralAt >= MIN_FOCUS_FRAME_MS) {
+      const last = chunks.at(-1);
+      frames.push(focusFrame(caption, neutralAt, chunkCaptionSegments(segments, last.start, last.items.length), null, typography));
+    }
+    return frames;
   }
 
   const phraseSegments = chunks
@@ -207,6 +241,7 @@ function buildCaptionFrames(schedule = [], options = {}) {
   const focus = normalizeFocusOptions(options);
   const typography = normalizeTypographyOptions(options);
   const prepared = schedule.map((caption) => {
+    if (caption.focusCues !== undefined && focus.mode !== 'focus') throw new Error('focusCues requires captionOptions.mode: focus');
     const segments = segmentCaptionText(caption.text, typography.locale);
     return { segments, authoredChunks: authoredCaptionChunks(caption, segments) };
   });

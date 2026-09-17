@@ -46,7 +46,7 @@ async function runQuickDemo(argv, io, deps) {
   try {
     const target = resolveDemoTarget(opts.target, cwd);
     if (opts.brief || (opts.language && !opts.script)) {
-      const brief = await (deps.collectDemoBrief || collectDemoBrief)(target, opts.language || 'und');
+      const brief = await (deps.collectDemoBrief || collectDemoBrief)(target, opts.language || 'und', { cwd, outDir: opts.out });
       const status = opts.brief ? 'authoring-brief' : 'needs-script';
       const payload = { ok: true, status, machineStatus: status, publishable: false, produced: [], brief };
       if (opts.json) writeJson(stdout, payload);

@@ -146,7 +146,9 @@ nonvisual products. A video recipe uses an actual recorded source:
 ```
 
 Profiles are `x`, `cws-youtube`, `youtube-shorts`; H.264/yuv420p, dimensions,
-20–40 second story duration, full decode and nonblank poster are checked.
+positive duration within the channel maximum, full decode and nonblank poster
+are checked. The 20–40 second story length is guidance, not a minimum: never pad
+a short demonstration merely to satisfy it.
 `contain` is explicit and pads instead of squeezing a native UI into 9:16.
 Vertical readability and story/captions must be authored by the producer; the
 generic renderer does not transplant browser DOM overlays onto native video.
@@ -284,7 +286,10 @@ require the current `baseRevision` and cannot change evidence or approvals:
 
 Save the patch as JSON, then run `take-a-repo production edit <repo> --patch
 <patch.json> --json` and `take-a-repo production run <repo> --json`. Pass the same
-`--config` when using a nondefault config. `set` merges trim/captions overrides;
+`--config` when using a nondefault config. `set` merges trim, captions,
+`captionOptions`, `protectedRegions` and `editorial` overrides. Caption style
+keys merge; arrays replace their prior values. Typography/font configuration
+remains config-owned; project style edits do not replace it.
 `{"deliverable":"demo-x","reset":true}` restores config defaults. Saved edits
 are also removable with `reset` after their deliverable is renamed or removed from
 the config; reset all obsolete IDs in one patch before running the new config.
@@ -306,8 +311,13 @@ Author meaning-based phrase boundaries with per-caption `focusChunks`, for examp
 `text: 'Claude 같은 전문 용어는 그대로', focusChunks: ['Claude 같은', '전문 용어는 그대로']`.
 This works in production edits and timed browser demo captions. Every original
 word, separator and punctuation mark must be preserved at complete word boundaries;
-invalid partitions fail before saving an edit. Word emphasis still animates inside
-each phrase. Without authored phrases, `wordsPerChunk` is a target count, allowing
+invalid partitions fail before saving an edit. Optional `focusCues` direct emphasis:
+`[{at:0,chunk:0,word:1},{at:0.8,chunk:0,word:null}]`. Cue `at` is seconds from
+caption start, `chunk` and `word` are zero-based; `null` releases emphasis for a
+product-reading hold. Cues start at zero, advance monotonically, visit every
+phrase in order and preserve reading time. Without cues, word emphasis follows
+`wordMs` and releases after the phrase has been read, instead of leaving the last
+word highlighted throughout a long hold. Without authored phrases, `wordsPerChunk` is a target count, allowing
 one extra word to avoid a trailing singleton (except intentional one-word mode).
 Automatic grouping cannot judge meaning. Review the complete phrase in the final
 video, including its transitions, placement relative to the product, and hold time.
@@ -348,7 +358,8 @@ changes reuse the clean master without another capture.
 `plan` returns producer and delivery actions; `run.metrics` reports executed and
 reused producers, rendered and reused deliverables. CLI run/edit responses stay
 compact; `status` and the referenced run report provide details on demand. Review the finished candidate
-with the existing `review <outDir>` command. Editing the project or changing its
+with the editorial review loop below, then use `review <outDir>` for the user's
+decision. Editing the project or changing its
 fonts makes the old candidate stale; only a matching final user decision permits
 approved export. Public APIs: `planProduction(config, { cwd })`,
 `runProduction(config, { cwd, fresh })`, `editProduction(config, patch, { cwd })`.
@@ -360,6 +371,44 @@ older runs have no reuse contract. Subsequent production runs can reuse it.
 Earlier runs and decisions remain in their original directories; approval is
 never transferred to the new candidate. Running the legacy capture command again
 executes producers again, applies the saved editorial project, and leaves its revision intact.
+
+### Final-composition editorial review
+
+New evidence runs containing video return `machineStatus:publish-ready` when
+technical checks pass, but remain `status:needs-fix` until the agent records a
+critique. Proof-only and historical runs retain their existing approval behavior.
+This record is an accountable judgement, not an automatic quality score or a user
+decision. There is no built-in model call.
+
+Author `editorial: {objective,audience,rationale,beats}` on each video or via
+`production edit`. Every beat needs `id`, semantic `role`, output `start/end`,
+`subject`, `expectedChange`, `attention` and `holdReason`. Describe what the viewer
+should see and why the duration is warranted; consecutive beats cover the whole
+output, including deliberate holds. Metadata itself proves nothing.
+The exact schema and editable fields are included in `production context`.
+
+```bash
+take-a-repo production review-context <repo> --deliverable demo-x --max-frames 16 --json
+# Watch the returned final video and inspect frame paths, then write a critique.
+take-a-repo production review <repo> --report critique.json --json
+take-a-repo review <outDir> --json
+```
+
+`review-context` samples the composited MP4 at beat/caption boundaries and across
+the duration, with a bounded budget. It is not complete event coverage. Request
+additional `--from/--to` ranges or `--crop x,y,w,h` for suspect transitions; use
+full frames to judge placement and crops to read details. Width defaults to the
+output width, capped at 1920, without upscaling. Context and pixels are hash-bound
+to the candidate and reused on repeat requests.
+
+The returned `reviewContract` supplies the report shape. For every video, submit
+context IDs and five distinct checks: `evidence`, `composition`, `legibility`,
+`pacing`, `continuity`. Each requires `pass|fail`, an observed timestamped reason
+and inspected frame IDs. A passing report needs at least two inspected full
+frames per authored beat. These checks establish traceability, not proof that
+an agent actually watched or judged well. Failed checks remain agent-owned work;
+repair via edit/run and critique the new digest. Only a passing current critique
+enables the separate user approval; it never authorizes publication.
 
 ### Reusable video observations and bounded context
 
@@ -395,7 +444,12 @@ ranges are 0.25..60 seconds, 160..1280 pixels and 2..1000 frames.
 This first version samples frames only: no transcription, OCR, semantic search,
 automatic scene detection or model call is performed. Brief events between
 samples can be missed. Increase sampling density when the requested edit needs
-more detail; an empty narrow range returns zero frames explicitly.
+more detail. `context --resample --width 1280` decodes a requested range directly
+from the source, and an empty indexed range automatically uses detail sampling;
+it does not merely select more entries from the same sparse grid.
+Detail requests report decoded `atSeconds` separately from `requestedAtSeconds`,
+to millisecond precision. Duplicate source frames are collapsed and out-of-range
+frames excluded; very narrow ranges in sparse footage can still be empty.
 
 `context` defaults to an eight-frame overview of the source; `--source` is required
 when multiple sources are configured. Ranges are source seconds, inclusive at

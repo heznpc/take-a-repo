@@ -1,0 +1,42 @@
+const Ajv = require('ajv');
+const schema = require('../schemas/production-project.schema.json');
+
+const CAPTION_ROLES = schema.definitions.caption.properties.role.enum;
+const CAPTION_FIELDS = ['role', 'focusChunks', 'focusCues'];
+const EDIT_FIELDS = ['trim', 'captions', 'captionOptions', 'protectedRegions', 'editorial'];
+const REVIEW_CRITERIA = ['evidence', 'composition', 'legibility', 'pacing', 'continuity'];
+const validate = new Ajv({ allErrors: true }).compile(schema.definitions.editorial);
+const GUIDANCE = 'State the audience and one viewer takeaway. For each beat, identify the visible subject, expected change, attention order and why its hold is needed. Bind beats to output time ranges; inspect the corresponding source before asserting a change. Author whole semantic caption phrases, with focusCues only where emphasis serves the visible event; use word:null to let the viewer inspect the product. Choose a stable caption lane using the actual composition and protected UI. Technical geometry, pixels and keywords cannot judge meaning. Inspect the final composited video at beat/phrase transitions and at native scale, record timestamped findings for evidence, composition, legibility, pacing and continuity, repair them, then present the exact candidate to the user. An agent review is not user approval.';
+
+function validateEditorialBrief(brief, duration = Infinity) {
+  if (brief === undefined) return;
+  if (!validate(brief)) throw new Error(`invalid editorial brief: ${JSON.stringify(validate.errors)}`);
+  if (['objective', 'audience', 'rationale'].some((key) => !brief[key].trim())) throw new Error('editorial intent cannot be blank');
+  const ids = new Set();
+  let previousEnd = 0;
+  for (const beat of brief.beats) {
+    if (ids.has(beat.id) || beat.end <= beat.start || beat.end > duration
+      || Math.abs(beat.start - previousEnd) > 1 / 30
+      || ['subject', 'expectedChange', 'attention', 'holdReason'].some((key) => !beat[key].trim())) {
+      throw new Error('editorial beats require unique IDs, meaningful direction and consecutive ranges covering the edited video');
+    }
+    ids.add(beat.id);
+    previousEnd = beat.end;
+  }
+  if (Number.isFinite(duration) && Math.abs(previousEnd - duration) > 1 / 30) throw new Error('editorial beats must cover the full edited duration, including holds');
+}
+
+function editorialContract() {
+  return {
+    version: 1, authority: 'authoring-intent-not-verified-evidence',
+    guidance: GUIDANCE, editableFields: EDIT_FIELDS, captionFields: Object.keys(schema.definitions.caption.properties),
+    timebase: 'output-seconds', cueTimebase: 'seconds-from-caption-start',
+    reviewCriteria: REVIEW_CRITERIA,
+    briefSchema: schema.definitions.editorial,
+    captionSchema: schema.definitions.caption,
+    example: { objective: 'Show a visible result', audience: 'Intended viewer', rationale: 'Why this cut serves the request',
+      beats: [{ id: 'result', role: 'result', start: 0, end: 3, subject: 'Changed product region', expectedChange: 'Observable before/after difference', attention: 'Result first, then explanation', holdReason: 'Time to inspect the changed values' }] },
+  };
+}
+
+module.exports = { CAPTION_ROLES, CAPTION_FIELDS, EDIT_FIELDS, REVIEW_CRITERIA, GUIDANCE, validateEditorialBrief, editorialContract };

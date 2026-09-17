@@ -5,7 +5,8 @@ const { digest, validateEvidenceConfig } = require('./evidence-contract');
 const { readJsonIfExists, safeAssetPath, sha256File, writeJson } = require('./handoff-files');
 const { previousRun, stableJson, artifactsIntact } = require('./production-cache');
 const { readProject, applyProject, withProjectLock } = require('./production-project');
-const { observationTool, extractObservationFrames } = require('./production-frames');
+const { observationTool, extractObservationFrames, selectedObservationFrames } = require('./production-frames');
+const { editorialContract } = require('./editorial');
 const { resolveChannelProfile } = require('./channels');
 
 const OBSERVATIONS_FILE = 'take-a-repo-observations.json';
@@ -143,7 +144,13 @@ function productionContext(config, opts = {}) {
   // Integrity stays on disk and is checked above; do not spend model context
   // repeating per-frame hashes or storage bookkeeping.
   const all = index.frames.map(({ atSeconds, path: framePath, width, height }) => ({ atSeconds, path: path.resolve(path.dirname(file), framePath), width, height }));
-  const { available, selected } = selectFrames(all, from, to, maxFrames);
+  const selection = selectFrames(all, from, to, maxFrames);
+  const resampled = !!opts.resample || opts.width !== undefined || selection.available === 0;
+  const detail = resampled ? selectedObservationFrames(item.file, p.outDir, {
+    times: Array.from({ length: maxFrames }, (_, i) => from + (to - from) * i / maxFrames), width: opts.width ?? 1280,
+  }).filter((frame) => frame.atSeconds >= from && frame.atSeconds < to) : [];
+  const selected = resampled ? [...new Map(detail.map((frame) => [frame.atSeconds, frame])).values()] : selection.selected;
+  const available = selection.available;
   const project = readProject(p.outDir);
   const effective = project ? applyProject(config, project) : config;
   const bytes = (value) => Buffer.byteLength(JSON.stringify(value));
@@ -152,15 +159,16 @@ function productionContext(config, opts = {}) {
     version: 1, kind: 'take-a-repo.production-context', authority: 'observation-only',
     source: { ...index.source, captionState: item.asset.captionState || 'unknown' }, sourceRunId: p.previous.report.id, index: file,
     range: { from, to, timebase: 'source-seconds', endExclusive: true },
-    coverage: { intervalSeconds: index.recipe.intervalSeconds, availableFrames: available, returnedFrames: selected.length, subsampled: available > selected.length, completeEventCoverage: false },
+    coverage: { intervalSeconds: resampled ? (to - from) / maxFrames : index.recipe.intervalSeconds, availableFrames: available, returnedFrames: selected.length, resampled, subsampled: !resampled && available > selected.length, completeEventCoverage: false },
     frames: selected,
+    authoring: editorialContract(),
     editContext: { baseRevision: project?.revision ?? null, deliverables: effective.evidence.deliverables.filter((d) => d.kind === 'video' && d.source === item.source).map((d) => ({
       id: d.id, channel: d.channel, trim: d.trim || null, captions: d.captions || [],
-      captionOptions: require('./production-render').resolvedCaptionOptions(d), protectedRegions: d.protectedRegions || [],
-      constraints: { durationSeconds: resolveChannelProfile(d.channel).recommendedDurationSeconds, trimMustFitSource: true, maxCaptions: 40, captionTimebase: 'output-seconds', canAddCaptions: item.asset.captionState === 'none' },
+      captionOptions: require('./production-render').resolvedCaptionOptions(d), protectedRegions: d.protectedRegions || [], editorial: d.editorial || null,
+      constraints: { recommendedDurationSeconds: resolveChannelProfile(d.channel).recommendedDurationSeconds, maximumDurationSeconds: resolveChannelProfile(d.channel).maximumDurationSeconds, trimMustFitSource: true, maxCaptions: 40, captionTimebase: 'output-seconds', canAddCaptions: item.asset.captionState === 'none' },
     })) },
-    metrics: { modelCalls: 0, fullFrames: all.length, returnedFrames: selected.length, fullFrameJsonBytes: fullBytes, returnedFrameJsonBytes: selectedBytes, frameJsonReductionPercent: Math.round((1 - selectedBytes / fullBytes) * 10000) / 100, fullImageBytes: index.frames.reduce((sum, f) => sum + f.bytes, 0), returnedImageBytes: selected.reduce((sum, f) => sum + index.frames.find((frame) => frame.atSeconds === f.atSeconds).bytes, 0), actualModelTokens: null },
-    guidance: 'Inspect selected frame files. Samples can miss brief events; request a narrower range or denser observations when needed. New captions require producer-declared captionState: none; burned-in or unknown captions require an uncaptioned master first. Trim uses source seconds; caption times use edited-output seconds. Apply edits with baseRevision via production edit, then production run. These observations do not prove current product behavior or grant publication approval.',
+    metrics: { modelCalls: 0, fullFrames: all.length, returnedFrames: selected.length, fullFrameJsonBytes: fullBytes, returnedFrameJsonBytes: selectedBytes, frameJsonReductionPercent: resampled ? null : Math.round((1 - selectedBytes / fullBytes) * 10000) / 100, fullImageBytes: index.frames.reduce((sum, f) => sum + f.bytes, 0), returnedImageBytes: selected.reduce((sum, f) => sum + fs.statSync(f.path).size, 0), actualModelTokens: null },
+    guidance: 'This is source planning context, not final composition review. Use --resample --from/--to for detail from actual footage; an empty indexed range is resampled automatically. Inspect frame files. New captions require captionState: none. Trim uses source seconds; caption/beat times use output seconds. Apply a revision-bound edit and run, then production review-context for the final composite and production review to record the agent critique. Observations never prove current product behavior or grant publication approval.',
   };
 }
 

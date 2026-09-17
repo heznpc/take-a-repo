@@ -33,7 +33,7 @@ test.each([
   ['short timing', s => { s.beats[0].holdMs = 500; }],
   ['unknown actions', s => { s.beats[0].click = '#submit'; }],
   ['unknown top-level fields', s => { s.shell = 'command'; }],
-  ['invalid anchor', s => { s.beats[0].anchor = 'heading-0'; }],
+  ['invalid anchor', s => { s.beats[0].anchor = '#invalid'; }],
   ['missing digest', s => { delete s.sourceDigest; }],
   ['empty language', s => { s.language = ''; }],
 ])('rejects %s', (_, mutate) => {

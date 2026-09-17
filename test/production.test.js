@@ -186,12 +186,18 @@ test('build reuse requires source and output fingerprints; undeclared builds alw
 
 test('saved editorial patches are revision-bound, append history and protect evidence authority', async () => {
   const spec = config();
-  spec.evidence.deliverables.push(video);
+  spec.evidence.deliverables.push({ ...video, captionOptions: { mode: 'focus', wordMs: 400, typography: { locale: 'en' } } });
   saveProject(outDir(), newProject());
-  const patch = { baseRevision: 1, operations: [{ deliverable: 'demo', set: { captions: [caption], trim: { start: 1, duration: 20 } } }] };
+  const patch = { baseRevision: 1, operations: [{ deliverable: 'demo', set: { captions: [caption], trim: { start: 1, duration: 20 },
+    captionOptions: { bottomOffset: 430 }, protectedRegions: [{ x: 0, y: 0, width: 100, height: 100 }],
+    editorial: { objective: 'Explain the result', audience: 'New user', rationale: 'Inspect the visible change', beats: [
+      { id: 'result', role: 'result', start: 0, end: 20, subject: 'Main panel', expectedChange: 'Visible result', attention: 'Panel then caption', holdReason: 'Inspect the numbers' },
+    ] },
+  } }] };
   const project = await editProduction(spec, patch, opts());
   expect(project.revision).toBe(2);
   expect(applyProject(spec, readProject(outDir())).evidence.deliverables[1].captions).toEqual([caption]);
+  expect(applyProject(spec, readProject(outDir())).evidence.deliverables[1]).toMatchObject({ captionOptions: { mode: 'focus', wordMs: 400, bottomOffset: 430, typography: { locale: 'en' } }, editorial: patch.operations[0].set.editorial });
   expect(fs.existsSync(path.join(outDir(), 'project-history', project.id, '1.json'))).toBe(true);
   await expect(editProduction(spec, patch, opts())).rejects.toThrow('revision conflict');
   for (const field of ['source', 'claims', 'checks', 'approval']) {

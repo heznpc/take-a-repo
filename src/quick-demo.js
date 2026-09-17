@@ -21,7 +21,8 @@ const {
 } = require('./demo-script');
 const { serveDirectory } = require('./serve');
 const { INSTALL_HINT, findFfmpeg, probeVideo } = require('./video');
-const { languageTag, surveyPage, resolveAuthoredScript } = require('./demo-authoring');
+const { languageTag, surveyPage, resolveAuthoredScript, scriptCaptionOptions } = require('./demo-authoring');
+const { buildCaptionFrames } = require('./demo-caption-focus');
 const { analyzeDemoCaptionMetrics } = require('./demo-caption-qa');
 
 const CHANNEL_IDS = Object.keys(CHANNEL_PROFILES);
@@ -179,19 +180,21 @@ function makeQuickDemoRun({ url, durationS, authoredScript }) {
     );
     // The plan is the contract for the clip; refuse to record a script that
     // violates our own caption/scene spec rather than shipping an off-spec clip.
-    const check = verifyDemoScript(script);
+    const check = authoredScript ? { ok: true } : verifyDemoScript(script);
     if (!check.ok) {
       throw new Error(`take-a-repo: generated demo script is off-spec: ${check.problems.join('; ')}`);
     }
 
     for (const beat of script.beats) {
-      if (beat.role === 'close') {
-        await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
-      } else if (beat.scrollTop != null) {
+      if (beat.scrollTop != null) {
         await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'smooth' }), beat.scrollTop);
       }
-      await demo.caption(beat.text);
-      await demo.wait(beat.holdMs);
+      const frames = authoredScript ? buildCaptionFrames([{ ...beat, atMs: 0 }, { atMs: beat.holdMs, text: '' }], scriptCaptionOptions(script)).filter((frame) => frame.text)
+        : [{ atMs: 0, text: beat.text, options: {} }];
+      for (let index = 0; index < frames.length; index++) {
+        await demo.caption(frames[index].text, frames[index].options);
+        await demo.wait((frames[index + 1]?.atMs ?? beat.holdMs) - frames[index].atMs);
+      }
     }
     await demo.hide();
     if (authoredScript) {
@@ -277,7 +280,7 @@ function buildQuickDemoConfig({
   };
   if (authoredScript) {
     demo.captionTexts = authoredScript.beats.map((beat) => beat.text);
-    demo.captionOptions = { typography: {
+    demo.captionOptions = { ...scriptCaptionOptions(authoredScript), typography: {
       locale: authoredScript.language,
       ...(font ? { fonts: [{ family: 'DemoLocal', from: font }] } : {}),
     } };

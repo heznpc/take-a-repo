@@ -92,14 +92,15 @@ describe('focused demo captions', () => {
     const text = 'Claude 같은 전문 용어는 그대로';
     const focusChunks = ['Claude 같은', '전문 용어는 그대로'];
     const options = { mode: 'focus', wordsPerChunk: 2, wordMs: 420, typography: { locale: 'ko-KR' } };
-    const browser = buildCaptionFrames(normalizeDemoCaptions([{ at: 0, text, focusChunks }]), options);
+    const browser = buildCaptionFrames(normalizeDemoCaptions([{ at: 0, text, focusChunks }, { at: 4, text: '' }]), options).filter((frame) => frame.text);
     const production = buildCaptionFrames(captionSchedule([{ start: 0, end: 4, text, focusChunks }]), options).filter((frame) => frame.text);
     expect(production).toEqual(browser);
     expect(browser.map((frame) => frame.text)).toEqual([
       'Claude 같은', 'Claude 같은', '전문 용어는 그대로', '전문 용어는 그대로', '전문 용어는 그대로',
+      '전문 용어는 그대로',
     ]);
-    expect(browser.map((frame) => frame.options.activeWordIndex)).toEqual([0, 1, 0, 1, 2]);
-    expect(browser.map((frame) => frame.atMs)).toEqual([0, 420, 840, 1260, 1680]);
+    expect(browser.map((frame) => frame.options.activeWordIndex)).toEqual([0, 1, 0, 1, 2, null]);
+    expect(browser.map((frame) => frame.atMs)).toEqual([0, 420, 840, 1260, 1680, 2100]);
   });
 
   test.each([

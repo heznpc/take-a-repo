@@ -12,6 +12,7 @@ const { CAPTION_FPS, captionFrameNumbers, verifyCaptionTrack } = require('./prod
 const { buildCaptionFrames, captionStyle, normalizeFocusOptions, splitCaptionWords, DEFAULT_FOCUS_WORD_MS } = require('./demo-caption-focus');
 const { analyzeDemoStoryboard } = require('./demo-storyboard');
 const { captionSchedule, renderCaptionTrack } = require('./production-captions');
+const { validateEditorialBrief } = require('./editorial');
 
 function resolvedCaptionOptions(spec) {
   return { ...(spec.channel ? resolveChannelProfile(spec.channel).captionOptions : {}), ...spec.captionOptions };
@@ -22,6 +23,7 @@ const validateCaption = new Ajv({ allErrors: true }).compile(projectSchema.defin
 const validateTrim = new Ajv({ allErrors: true }).compile(projectSchema.definitions.trim);
 
 function validateEditorial(spec) {
+  validateEditorialBrief(spec.editorial, spec.trim?.duration);
   if (spec.trim && !validateTrim(spec.trim)) throw new Error(`${spec.id}: invalid trim`);
   const captions = spec.captions ?? [];
   if (!Array.isArray(captions) || captions.length > 40) throw new Error('captions must be an array of at most 40 entries');
@@ -71,9 +73,10 @@ async function renderProductionDeliverable(spec, report, runDir, cwd = process.c
   if (!input || !input.mediaType.startsWith('video/')) throw new Error(`video source missing: ${spec.source}`);
   const start = spec.trim?.start || 0;
   const duration = spec.trim?.duration || input.qa.durationSeconds;
+  validateEditorialBrief(spec.editorial, duration);
   if (!(duration > 0) || start + duration > input.qa.durationSeconds + 0.05) throw new Error(`${spec.id}: requested source interval is unavailable; recapture this scene`);
   const profile = resolveChannelProfile(spec.channel);
-  if (duration < profile.recommendedDurationSeconds.min || duration > profile.recommendedDurationSeconds.max) throw new Error(`${spec.id}: channel duration must be ${profile.recommendedDurationSeconds.min}-${profile.recommendedDurationSeconds.max}s`);
+  if (duration <= 0 || duration > profile.maximumDurationSeconds) throw new Error(`${spec.id}: channel duration must be 0 < duration <= ${profile.maximumDurationSeconds}s`);
   if (spec.thumbnail != null && (typeof spec.thumbnail !== 'object' || !Number.isFinite(spec.thumbnail.at) || spec.thumbnail.at < 0 || spec.thumbnail.at >= duration)) throw new Error('thumbnail.at must be inside the edited video');
   const captions = spec.captions ?? [];
   if (captions.some((caption) => caption.end > duration)) throw new Error(`${spec.id}: caption extends past the edited video`);
@@ -104,13 +107,13 @@ async function renderProductionDeliverable(spec, report, runDir, cwd = process.c
   const measured = measureAsset(runDir, { id: spec.id, path: path.relative(runDir, video), mediaType: 'video/mp4', role: 'recording', captionState: 'burned-in' });
   const qa = measured.qa;
   if (qa.codec !== 'h264' || qa.pixelFormat !== 'yuv420p' || qa.width !== width || qa.height !== height
-    || qa.durationSeconds < profile.recommendedDurationSeconds.min || qa.durationSeconds > profile.recommendedDurationSeconds.max) {
+    || qa.durationSeconds <= 0 || qa.durationSeconds > profile.maximumDurationSeconds) {
     throw new Error(`production channel QA failed for ${spec.id}`);
   }
   qa.captions = verifyCaptionTrack({ bin, video, samples: track.samples, width, height });
   const timelineFile = path.join(dir, 'timeline.json');
   fs.writeFileSync(timelineFile, JSON.stringify({ version: 1, fps: CAPTION_FPS, style: captionStyle(optionsResolved), frames: track.timeline, measurements: track.metrics }, null, 2));
-  execFileSync(bin, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-ss', String(spec.thumbnail?.at ?? profile.thumbnail.at), '-i', video, '-frames:v', '1', poster], options);
+  execFileSync(bin, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-ss', String(spec.thumbnail?.at ?? Math.min(profile.thumbnail.at, duration / 2)), '-i', video, '-frames:v', '1', poster], options);
   return [measured,
     measureAsset(runDir, { id: `${spec.id}-poster`, path: path.relative(runDir, poster), mediaType: 'image/png', role: 'screenshot' }),
     measureAsset(runDir, { id: `${spec.id}-captions`, path: path.relative(runDir, timelineFile), mediaType: 'application/json', role: 'caption-timeline' }),

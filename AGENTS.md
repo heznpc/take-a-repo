@@ -24,9 +24,14 @@ node bin/take-a-repo.js production run examples/evidence --config production.con
 
 Use this path when the consumer declares `producer.reuse`; do not add reuse for
 live services or undeclared dependencies. `production edit --patch <json>` applies
-revision-bound trim/caption patches, then `production run` rerenders changed
+revision-bound trim/caption/style/protected-region/editorial patches, then `production run` rerenders changed
 videos from preserved footage. CLI replies stay compact; inspect the referenced
 run report only when needed. New candidates still require the user's approval.
+Video candidates also require an agent critique: use `production review-context`
+to inspect the final composited output, then `production review --report <json>`.
+Author audience, objective and beat intent in `editorial`; inspect each beat and
+record evidence, composition, legibility, pacing and continuity findings. This
+record is never user approval. `machineStatus:publish-ready` alone is insufficient.
 
 Read `docs/evidence.md` for the producer/check/claim contract and
 `skills/launch-proof/SKILL.md` for development-completion handoff. Native inputs
@@ -67,6 +72,7 @@ src/
   production-project.js / production-cache.js → revisioned edits and verified local-input reuse
   production-render.js → render trim/caption changes from preserved source footage
   production-observe.js / production-frames.js → reusable source samples and bounded model context
+  editorial.js / production-review.js → shared authoring contract and final-video agent critique
   launch.js      → launchWithExtension / closeContext (persistent context, extension-id discovery)
   extension.js   → stageExtension / patchManifestForLocalhost
   serve.js       → serveDirectory (path-traversal-safe localhost fixture server)
@@ -129,6 +135,8 @@ test/            → unit tests for the pure/safe modules (no browser)
   break meaning, especially in localized copy. Keep particles and predicates
   with their phrase; review the final video's phrase transitions and placement
   against the visible product. Animation/pixel QA alone is not editorial approval.
+  Use `focusCues` for purposeful emphasis; `word:null` releases emphasis during
+  product-reading holds. Default emphasis releases after the reading cadence.
   Add Whisper-style alignment only as an optional future audio adapter; silent
   product demos already have deterministic caption timing.
 - **Localized typography is measured, not guessed**: localized publishing
@@ -196,6 +204,9 @@ should be crisp inspection assets. X/SNS demo clips should be 20-40 seconds,
 `sns-twitter` (`1200×675`) for static X card images. Show a visible result in
 the first 3 seconds, keep captions short, and move clicks or typing slowly
 enough to read.
+Duration and story-order recommendations are guidance, not hard quality gates.
+Do not pad a short demonstration, force an intro/outro, or add safety/restore copy
+just to satisfy keywords. Every hold needs a visible subject and viewing purpose.
 Use `demos: []` for multiple campaign cuts such as `demo-translate`,
 `demo-restore`, or `demo-popup`; `--scene <name>` reruns just one clip.
 Use `demo.click(selectorOrLocator, { moveMs, beforeMs, holdMs })` for visible cursor

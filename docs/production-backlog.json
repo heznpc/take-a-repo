@@ -86,6 +86,18 @@
       "priorState": "보관된 SkillBridge fixture 영상으로 편집 경로 검증",
       "status": "partial",
       "acceptance": "현재 소비자 빌드·제품 시나리오별 producer·랜딩 자산 반영까지 별도로 실행 검증한다. 보관 fixture를 최신 서비스 검증으로 표시하지 않는다."
+    },
+    {
+      "id": "editorial-authoring-review",
+      "request": "프롬프트가 진부한 연출을 유도하는 기술적 결함을 고친다",
+      "priorState": "문서 순서·키워드·권장 길이를 연출 품질로 오인하고 최종 합성 영상 관찰 계약이 없음",
+      "status": "implemented_for_cli_agent",
+      "acceptance": "관찰 이미지와 시각적 의도를 작성 계약에 포함하고 의미 단위 및 강조 큐를 공통 렌더러에 전달한다. 최종 합성 프레임과 다섯 비평 기준을 현재 후보에 연결하며 검토 기록을 기계적 품질 보증이나 사용자 승인으로 표현하지 않는다.",
+      "verification": [
+        "test/editorial.test.js",
+        "test/demo-authoring.test.js",
+        "scripts/verify-production-media.js"
+      ]
     }
   ],
   "architectureDiscussedButNotDelivered": [

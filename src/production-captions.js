@@ -7,6 +7,7 @@ const { prepareCaptionTypography } = require('./caption-typography');
 const { buildCaptionFrames, buildCaptionTimeline } = require('./demo-caption-focus');
 const { analyzeDemoCaptionMetrics } = require('./demo-caption-qa');
 const { CAPTION_FPS } = require('./production-caption-qa');
+const { CAPTION_FIELDS } = require('./editorial');
 
 const frameAt = (seconds) => Math.ceil(seconds * CAPTION_FPS - 1e-8);
 
@@ -14,7 +15,7 @@ function captionSchedule(captions) {
   // A hide event closes each authored interval, including the last caption.
   return captions.flatMap((caption) => [{
     atMs: caption.start * 1000, text: caption.text,
-    ...(caption.focusChunks === undefined ? {} : { focusChunks: caption.focusChunks }),
+    ...Object.fromEntries(CAPTION_FIELDS.filter((key) => caption[key] !== undefined).map((key) => [key, caption[key]])),
   }, { atMs: caption.end * 1000, text: '' }]);
 }
 

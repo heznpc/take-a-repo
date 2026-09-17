@@ -6,9 +6,9 @@ const { sha256File, writeJson } = require('../src/handoff-files');
 const { newProject, saveProject } = require('../src/production-project');
 const { editProduction } = require('../src/production');
 const { runProductionCommand } = require('../src/production-cli');
-const { observationTool, extractObservationFrames } = require('../src/production-frames');
+const { observationTool, extractObservationFrames, selectedObservationFrames } = require('../src/production-frames');
 
-jest.mock('../src/production-frames', () => ({ observationTool: jest.fn(), extractObservationFrames: jest.fn() }));
+jest.mock('../src/production-frames', () => ({ observationTool: jest.fn(), extractObservationFrames: jest.fn(), selectedObservationFrames: jest.fn() }));
 
 let cwd, outDir, runDir, config;
 function publishRun(contents = 'fixture source video', duration = 60) {
@@ -33,6 +33,10 @@ beforeEach(() => {
   publishRun();
   saveProject(outDir, newProject());
   observationTool.mockReturnValue({ bin: 'test-ffmpeg', fingerprint: 'a'.repeat(64) });
+  selectedObservationFrames.mockImplementation((_source, _outDir, recipe) => recipe.times.map((atSeconds, i) => {
+    const file = path.join(outDir, `detail-${i}.png`); fs.writeFileSync(file, 'detail');
+    return { atSeconds, path: file, width: recipe.width, height: 720 };
+  }));
   extractObservationFrames.mockImplementation((_source, dir, recipe) => Array.from({ length: 30 }, (_, i) => {
     const file = `frame-${String(i + 1).padStart(4, '0')}.png`;
     fs.writeFileSync(path.join(dir, file), `unit-test-frame-${i}`);
@@ -49,7 +53,7 @@ test('indexes once, reuses across editorial revisions and returns source-relativ
   const context = productionContext(config, { cwd, from: 10, to: 18, maxFrames: 3 });
   expect(context.frames.map((f) => f.atSeconds)).toEqual([10, 14, 16]);
   expect(context.coverage).toMatchObject({ availableFrames: 4, returnedFrames: 3, subsampled: true, completeEventCoverage: false });
-  expect(context.editContext).toMatchObject({ baseRevision: 2, deliverables: [{ id: 'demo', trim: { start: 10, duration: 8 }, constraints: { durationSeconds: { min: 20, max: 40 }, trimMustFitSource: true } }] });
+  expect(context.editContext).toMatchObject({ baseRevision: 2, deliverables: [{ id: 'demo', trim: { start: 10, duration: 8 }, constraints: { recommendedDurationSeconds: { min: 20, max: 40 }, maximumDurationSeconds: 140, trimMustFitSource: true } }] });
   expect(context.metrics).toMatchObject({ fullFrames: 30, returnedFrames: 3, modelCalls: 0, actualModelTokens: null });
   expect(context.source.captionState).toBe('unknown');
   expect(context.editContext.deliverables[0].constraints.canAddCaptions).toBe(false);
@@ -114,10 +118,12 @@ test('corrupt indexes and escaping or symlinked frame paths are never returned',
   expect(() => productionContext(config, { cwd })).toThrow(/index changed/);
 });
 
-test('empty ranges are explicit; default context samples the entire index within its budget', async () => {
+test('empty indexed ranges are decoded from source; overview retains its bounded cache', async () => {
   await observeProduction(config, { cwd });
   const empty = productionContext(config, { cwd, from: 0.1, to: 0.2 });
-  expect(empty.frames).toEqual([]);
+  expect(empty.frames).toHaveLength(8);
+  expect(empty.frames.every((frame) => frame.atSeconds >= 0.1 && frame.atSeconds < 0.2)).toBe(true);
+  expect(empty.coverage.resampled).toBe(true);
   expect(empty.coverage.availableFrames).toBe(0);
   const overview = productionContext(config, { cwd });
   expect(overview.frames).toHaveLength(8);

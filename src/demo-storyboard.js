@@ -50,28 +50,6 @@ function analyzeDemoStoryboard(demoConfig, { viewport, mp4Requested } = {}) {
   captions = captions
     .filter((caption) => caption.atMs >= trimStartMs && (trimEndMs == null || caption.atMs < trimEndMs))
     .map((caption) => ({ ...caption, atMs: caption.atMs - trimStartMs }));
-  if (!captions.length) {
-    warnings.push(storyboardWarning(
-      'no-captions',
-      'storyboard has no captions',
-      'add short captions for SNS context',
-    ));
-  }
-  if (captions.length === 1) {
-    warnings.push(storyboardWarning(
-      'single-caption',
-      'storyboard has only one caption',
-      'aim for before -> action -> result',
-    ));
-  }
-  if (captions[0] && captions[0].atMs > 3000) {
-    warnings.push(storyboardWarning(
-      'late-first-caption',
-      'first caption starts after 3s',
-      'show the result sooner',
-      { atMs: captions[0].atMs },
-    ));
-  }
   try {
     for (const density of analyzeFocusCaptionDensity(captions, demoConfig.captionOptions)) {
       const earliestNextAt = (captions[density.index].atMs + density.recommendedMs) / 1000;
@@ -113,16 +91,6 @@ function analyzeDemoStoryboard(demoConfig, { viewport, mp4Requested } = {}) {
     }
   }
 
-  const text = captions.map((caption) => caption.text).join(' ').toLowerCase();
-  const hasSafetyRole = captions.some((caption) => caption.role === 'safety' || caption.role === 'restore');
-  if (captions.length && !hasSafetyRole && !/(restore|original|safe|undo|revert|reset|복구|원문|되돌)/i.test(text)) {
-    warnings.push(storyboardWarning(
-      'missing-safety-restore',
-      'storyboard has no visible safety/restore beat',
-      'show restore, undo, original text, or another safety path',
-    ));
-  }
-
   // Honor an explicit mp4Requested (only the caller knows about the CLI --mp4
   // flag) but also infer it from the demo config, so public callers like
   // lintDemoStoryboard() don't emit a spurious warning when demo.mp4 is set.
@@ -147,31 +115,6 @@ function analyzeDemoStoryboard(demoConfig, { viewport, mp4Requested } = {}) {
       `viewport ${viewport.width}x${viewport.height} is not even`,
       'use even dimensions for H.264',
       { viewport },
-    ));
-  }
-
-  if (demoConfig.trim && typeof demoConfig.trim === 'object' && demoConfig.trim.duration != null) {
-    if (trimDurationMs != null && trimDurationMs < 20000) {
-      warnings.push(storyboardWarning(
-        'short-duration',
-        'trim.duration is under 20s',
-        'make sure the story has enough context',
-        { durationMs: trimDurationMs },
-      ));
-    }
-    if (trimDurationMs != null && trimDurationMs > 40000) {
-      warnings.push(storyboardWarning(
-        'long-duration',
-        'trim.duration is over 40s',
-        'X clips usually perform better shorter',
-        { durationMs: trimDurationMs },
-      ));
-    }
-  } else {
-    warnings.push(storyboardWarning(
-      'missing-duration',
-      'no trim.duration set',
-      'target 20-40s for SNS clips',
     ));
   }
 

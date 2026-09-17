@@ -5,23 +5,36 @@ const { planProduction, runProduction, editProduction } = require('./production'
 const { readProject } = require('./production-project');
 const { evidenceState } = require('./evidence-state');
 const { observeProduction, productionContext } = require('./production-observe');
+const { reviewContext, recordEditorialReview } = require('./production-review');
 
-const PRODUCTION_USAGE = `take-a-repo production <plan|run|observe|context|edit|status> [repo] [options]
+function compactReview(review) {
+  if (!review) return review;
+  const { status, authority, reviewDigest, path: file } = review;
+  return { status, authority, reviewDigest, path: file };
+}
+
+const PRODUCTION_USAGE = `take-a-repo production <plan|run|observe|context|review-context|review|edit|status> [repo] [options]
 
   plan                explain which producers and outputs will be reused
   run                 create/update the saved project and complete candidate
   observe             index source video frames once; reuse intact observations
   context             return bounded frame references and current edit state
-  edit --patch <json>  apply trim/caption changes against baseRevision
+  review-context      inspect final composition, beat/caption boundaries and intent
+  review --report <json> record a digest-bound agent critique; never user approval
+  edit --patch <json>  save intent, caption, style and protected-region edits
   status              inspect the saved project and current candidate
 
   --config <path>      consumer config (default: take-a-repo.config.js)
   --fresh             run: force a fresh build, capture and render
   --attempt <n>       run: positive retry number for automation.maxAttempts
   --source <id:asset>  observe/context: configured source video
-  --from <seconds>    context: inclusive source time (default: 0)
-  --to <seconds>      context: exclusive source time (default: duration)
+  --deliverable <id>  review-context: final video to inspect
+  --from <seconds>    context: source time; review-context: output time (inclusive)
+  --to <seconds>      exclusive range end (default: duration)
   --max-frames <n>    context: 2..32 images (default: 8)
+  --resample          context: decode detail directly from source, not cached grid
+  --width <pixels>    detail/review frames: 160..1920 (no upscaling)
+  --crop <x,y,w,h>    review-context: final-output pixel region, not an edit
   --json              exactly one JSON result; progress goes to stderr
 
 Reuse is opt-in per producer: reuse: { mode: 'local-inputs', inputs: [...],
@@ -48,14 +61,15 @@ async function runProductionCommand(argv, io = {}) {
   try {
     const args = argv.slice(1);
     const action = args.shift();
-    if (!['plan', 'run', 'observe', 'context', 'edit', 'status'].includes(action)) throw new Error('expected production plan, run, observe, context, edit or status');
+    if (!['plan', 'run', 'observe', 'context', 'review-context', 'review', 'edit', 'status'].includes(action)) throw new Error('expected production plan, run, observe, context, review-context, review, edit or status');
     const options = { json };
     let repo = null;
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
       if (arg === '--json') continue;
       if (arg === '--fresh') { options.fresh = true; continue; }
-      if (['--config', '--patch', '--attempt', '--source', '--from', '--to', '--max-frames'].includes(arg)) {
+      if (arg === '--resample') { options.resample = true; continue; }
+      if (['--config', '--patch', '--attempt', '--source', '--from', '--to', '--max-frames', '--deliverable', '--width', '--crop', '--report'].includes(arg)) {
         const value = args[++i];
         if (!value || value.startsWith('-')) throw new Error(`${arg} requires a value`);
         options[arg.slice(2)] = value;
@@ -64,9 +78,16 @@ async function runProductionCommand(argv, io = {}) {
     }
     if (options.fresh && action !== 'run') throw new Error('--fresh is only supported by production run');
     if (options.source !== undefined && !['observe', 'context'].includes(action)) throw new Error('--source requires production observe or context');
-    for (const key of ['from', 'to', 'max-frames']) {
+    if (options.resample && action !== 'context') throw new Error('--resample requires production context');
+    if (options.deliverable !== undefined && action !== 'review-context') throw new Error('--deliverable requires review-context');
+    if (options.crop !== undefined) {
+      const numbers = options.crop.split(',').map(Number);
+      if (action !== 'review-context' || numbers.length !== 4 || numbers.some((v) => !Number.isInteger(v) || v < 0)) throw new Error('--crop requires review-context and x,y,width,height');
+      options.crop = Object.fromEntries(['x', 'y', 'width', 'height'].map((key, i) => [key, numbers[i]]));
+    }
+    for (const key of ['from', 'to', 'max-frames', 'width']) {
       if (options[key] === undefined) continue;
-      if (action !== 'context' || !Number.isFinite(Number(options[key]))) throw new Error(`--${key} requires a number and production context`);
+      if (!['context', 'review-context'].includes(action) || !Number.isFinite(Number(options[key]))) throw new Error(`--${key} requires a number and production context or review-context`);
       options[key] = Number(options[key]);
     }
     if (options.from < 0 || options.to <= 0 || options.from !== undefined && options.to !== undefined && options.to <= options.from
@@ -76,6 +97,7 @@ async function runProductionCommand(argv, io = {}) {
       if (action !== 'run' || !Number.isSafeInteger(options.attempt) || options.attempt < 1) throw new Error('--attempt requires a positive integer and production run');
     }
     if (action === 'edit' && !options.patch || action !== 'edit' && options.patch) throw new Error('production edit requires --patch; other actions do not accept it');
+    if (action === 'review' && !options.report || action !== 'review' && options.report) throw new Error('production review requires --report; other actions do not accept it');
     const invocationCwd = (io.processCwd || (() => process.cwd()))();
     const cwd = path.resolve(invocationCwd, repo || '.');
     const configPath = resolveConfigPath(options.config, cwd);
@@ -83,10 +105,16 @@ async function runProductionCommand(argv, io = {}) {
     code = 1;
     const loaded = require(configPath);
     const config = loaded.default || loaded;
-    const opts = { cwd, json, fresh: options.fresh, attempt: options.attempt, source: options.source, from: options.from, to: options.to, maxFrames: options['max-frames'], log: (message) => stderr.write(`[take-a-repo] ${message}\n`) };
+    const opts = { cwd, json, fresh: options.fresh, attempt: options.attempt, source: options.source, from: options.from, to: options.to, maxFrames: options['max-frames'], resample: options.resample, width: options.width, crop: options.crop, deliverable: options.deliverable, log: (message) => stderr.write(`[take-a-repo] ${message}\n`) };
     if (action === 'plan') output({ ok: true, ...planProduction(config, opts) });
     else if (action === 'observe') output({ ok: true, ...await observeProduction(config, opts) });
     else if (action === 'context') output({ ok: true, ...productionContext(config, opts) });
+    else if (action === 'review-context') output({ ok: true, ...reviewContext(config, opts) });
+    else if (action === 'review') {
+      const file = path.resolve(invocationCwd, options.report);
+      if (fs.statSync(file).size > 256 * 1024) throw new Error('review report exceeds 256 KiB');
+      output({ ok: true, editorialReview: compactReview(await recordEditorialReview(config, JSON.parse(fs.readFileSync(file, 'utf8')), opts)) });
+    }
     else if (action === 'edit') {
       const patchPath = path.resolve(invocationCwd, options.patch);
       if (fs.statSync(patchPath).size > 256 * 1024) throw new Error('edit patch exceeds 256 KiB');
@@ -96,13 +124,13 @@ async function runProductionCommand(argv, io = {}) {
     } else if (action === 'status') {
       const outDir = path.resolve(cwd, config.outDir || 'product-evidence');
       const state = evidenceState(outDir);
-      output({ ok: true, project: readProject(outDir), candidate: { id: state.id, status: state.status, publishable: state.publishable, problems: state.problems, metrics: state.report?.production?.metrics } });
+      output({ ok: true, project: readProject(outDir), candidate: { id: state.id, status: state.status, publishable: state.publishable, problems: state.problems, editorialReview: state.editorialReview, nextActions: state.actions, metrics: state.report?.production?.metrics } });
     } else {
       const result = await runProduction(config, opts);
       // Keep routine agent context bounded. Detailed recipes/files remain in
       // the saved project, plan command and referenced run report.
-      const { outDir, manifest, status, machineStatus, exitCode, reusedCandidate, metrics } = result;
-      output({ ok: exitCode === 0, outDir, manifest, status, machineStatus, exitCode, reusedCandidate, metrics });
+      const { outDir, manifest, status, machineStatus, exitCode, reusedCandidate, metrics, editorialReview, nextActions } = result;
+      output({ ok: exitCode === 0, outDir, manifest, status, machineStatus, exitCode, reusedCandidate, metrics, editorialReview: compactReview(editorialReview), nextActions });
       return result.exitCode;
     }
     return 0;

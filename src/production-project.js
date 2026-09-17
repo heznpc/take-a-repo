@@ -5,6 +5,7 @@ const Ajv = require('ajv');
 const { digest, validateEvidenceConfig } = require('./evidence-contract');
 const { writeJson, sha256File } = require('./handoff-files');
 const { validateEditorial } = require('./production-render');
+const { EDIT_FIELDS } = require('./editorial');
 
 const PROJECT_FILE = 'take-a-repo-project.json';
 const validate = new Ajv({ allErrors: true }).compile(require('../schemas/production-project.schema.json'));
@@ -48,7 +49,10 @@ function applyProject(config, project) {
     ...config,
     evidence: {
       ...config.evidence,
-      deliverables: config.evidence.deliverables.map((d) => ({ ...d, ...project.edits[d.id] })),
+      deliverables: config.evidence.deliverables.map((d) => {
+        const edit = project.edits[d.id];
+        return { ...d, ...edit, ...(edit?.captionOptions ? { captionOptions: { ...d.captionOptions, ...edit.captionOptions } } : {}) };
+      }),
     },
   };
 }
@@ -69,8 +73,10 @@ function editProject(config, outDir, patch) {
     if (op.reset === true) delete project.edits[op.deliverable];
     else {
       if (!op.set || typeof op.set !== 'object' || Array.isArray(op.set) || !Object.keys(op.set).length
-        || Object.keys(op.set).some((k) => !['trim', 'captions'].includes(k))) throw new Error('only trim and captions can be edited; sources, claims, checks and authority are protected');
-      project.edits[op.deliverable] = { ...project.edits[op.deliverable], ...op.set };
+        || Object.keys(op.set).some((k) => !EDIT_FIELDS.includes(k))) throw new Error('only editorial fields can be edited; sources, claims, checks and authority are protected');
+      const old = project.edits[op.deliverable];
+      project.edits[op.deliverable] = { ...old, ...op.set,
+        ...(op.set.captionOptions ? { captionOptions: { ...old?.captionOptions, ...op.set.captionOptions } } : {}) };
     }
   }
   const effective = applyProject(config, project);

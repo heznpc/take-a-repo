@@ -64,10 +64,13 @@ function evidenceState(outDir) {
   const decision = readJsonIfExists(path.join(runDir, 'review.json'));
   const current = decision?.reviewDigest === reviewDigest;
   const ready = report.machineStatus === 'publish-ready' && !problems.length && report.scope.full;
-  const status = !ready ? 'needs-fix' : current ? decision.status : 'awaiting-approval';
+  const editorialReview = require('./production-review').reviewStatus(report, runDir, reviewDigest);
+  const humanApprovalReady = ready && ['not-required', 'reviewed'].includes(editorialReview.status);
+  const status = !humanApprovalReady ? 'needs-fix' : current ? decision.status : 'awaiting-approval';
   return {
-    id: report.id, status, machineStatus: report.machineStatus, publishable: ready && current && decision.status === 'approved',
-    reviewDigest, scope: report.scope, problems, actions: report.actions,
+    id: report.id, status, machineStatus: report.machineStatus, publishable: humanApprovalReady && current && decision.status === 'approved',
+    editorialReview, humanApprovalReady,
+    reviewDigest, scope: report.scope, problems, actions: [...(report.actions || []), ...(ready && !humanApprovalReady ? [{ code: 'editorial-review-required', owner: 'agent', fix: 'Inspect production review-context, repair findings, then record production review --report before requesting user approval.' }] : [])],
     ...(current ? { feedback: decision.feedback || [], decision } : {}),
     report, runDir,
   };
