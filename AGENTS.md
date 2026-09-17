@@ -138,8 +138,11 @@ test/            → unit tests for the pure/safe modules (no browser)
   break meaning, especially in localized copy. Keep particles and predicates
   with their phrase; review the final video's phrase transitions and placement
   against the visible product. Animation/pixel QA alone is not editorial approval.
-  Use `focusCues` for purposeful emphasis; `word:null` releases emphasis during
-  product-reading holds. Default emphasis releases after the reading cadence.
+  Preserve sequential animation on every word; fixing phrase boundaries must not
+  replace it with agent-selected keywords. Omit `focusCues` for automatic timing.
+  Cues may adjust timing but must highlight every word in reading order for at least
+  120ms each. `word:null` releases emphasis only after the complete phrase.
+  Default emphasis releases after the reading cadence.
   Add Whisper-style alignment only as an optional future audio adapter; silent
   product demos already have deterministic caption timing.
 - **Localized typography is measured, not guessed**: localized publishing

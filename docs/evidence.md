@@ -317,11 +317,16 @@ or rewrite the complete sentence. Multiple temporal chunks need independently
 readable statements and an editorial reason, not just a word-count target.
 This works in production edits and timed browser demo captions. Every original
 word, separator and punctuation mark must be preserved at complete word boundaries;
-invalid partitions fail before saving an edit. Optional `focusCues` direct emphasis:
-`[{at:0,chunk:0,word:1},{at:0.8,chunk:0,word:null}]`. Cue `at` is seconds from
-caption start, `chunk` and `word` are zero-based; `null` releases emphasis for a
-product-reading hold. Cues start at zero, advance monotonically, visit every
-phrase in order and preserve reading time. Without cues, word emphasis follows
+invalid partitions fail before saving an edit. Keeping a complete sentence visible
+must preserve sequential animation on every word, not replace it with selected
+keywords. Omit `focusCues` for automatic timing. Optional cues override timing;
+for a three-word caption: `[{at:0,chunk:0,word:0},{at:0.4,chunk:0,word:1},
+{at:0.8,chunk:0,word:2},{at:1.2,chunk:0,word:null}]`. Cue `at` is seconds from
+caption start; `chunk` and `word` are zero-based. Cues start at zero, advance
+monotonically, highlight every word once in reading order for at least 120ms,
+and preserve phrase reading time. `null` releases emphasis only after the complete
+phrase. Skipped/reordered words and premature releases fail before saving.
+Without cues, word emphasis follows
 `wordMs` and releases after the phrase has been read, instead of leaving the last
 word highlighted throughout a long hold. Without authored phrases, `wordsPerChunk` is a target count, allowing
 one extra word to avoid a trailing singleton (except intentional one-word mode).

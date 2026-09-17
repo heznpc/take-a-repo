@@ -72,6 +72,7 @@
         "role": {"enum": ["result", "action", "proof", "safety", "restore", "cta", "open", "body", "close"]},
         "focusCues": {
           "type": "array",
+          "description": "Optional timing overrides for sequential word emphasis. Highlight every word once in reading order, for at least 120ms each; null releases emphasis only after the complete phrase. Omit for automatic wordMs timing.",
           "minItems": 1,
           "maxItems": 80,
           "items": {

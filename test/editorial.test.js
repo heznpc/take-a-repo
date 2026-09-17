@@ -103,10 +103,10 @@ test('uninspected beats cannot pass and failed critiques remain agent-owned work
   expect(evidenceState(path.join(cwd, 'evidence'))).toMatchObject({ status: 'needs-fix', publishable: false, editorialReview: { status: 'changes-requested' } });
 });
 
-test('authored cues select emphasis and release it during a product-reading hold', () => {
-  const caption = { atMs: 1000, text: 'Keep the code', focusChunks: ['Keep the code'], focusCues: [{ at: 0, chunk: 0, word: 2 }, { at: 0.6, chunk: 0, word: null }] };
+test('authored cues time every word and release emphasis during a product-reading hold', () => {
+  const caption = { atMs: 1000, text: 'Keep the code', focusChunks: ['Keep the code'], focusCues: [0, 1, 2, null].map((word, i) => ({ at: i * 0.4, chunk: 0, word })) };
   const frames = buildCaptionFrames([caption, { atMs: 4000, text: '' }], { mode: 'focus' });
-  expect(frames.slice(0, 2).map((f) => [f.atMs, f.options.activeWordIndex])).toEqual([[1000, 2], [1600, null]]);
+  expect(frames.slice(0, 4).map((f) => [f.atMs, f.options.activeWordIndex])).toEqual([[1000, 0], [1400, 1], [1800, 2], [2200, null]]);
   for (const focusCues of [[{ at: 0.2, chunk: 0, word: 0 }], [{ at: 0, chunk: 0, word: 5 }], [{ at: 0, chunk: 0, word: 0 }, { at: 3, chunk: 0, word: null }]]) {
     expect(() => buildCaptionFrames([{ ...caption, focusCues }, { atMs: 4000, text: '' }], { mode: 'focus' })).toThrow('focusCues');
   }
@@ -122,7 +122,7 @@ test('editorial intent cannot omit the uneventful tail or overlap viewing beats'
 
 test('Korean semantic cues work in quick scripts and production; shot order is authored', () => {
   const text = '전문 용어는 그대로';
-  const beat = { role: 'proof', anchor: 'heading-0', text, holdMs: 3000, focusChunks: [text], focusCues: [{ at: 0, chunk: 0, word: 2 }, { at: 0.8, chunk: 0, word: null }] };
+  const beat = { role: 'proof', anchor: 'heading-0', text, holdMs: 3000, focusChunks: [text], focusCues: [0, 1, 2, null].map((word, i) => ({ at: i * 0.4, chunk: 0, word })) };
   const script = { version: 1, language: 'ko', sourceDigest: sourceDigest({ title: 'Fixture', headings: [], paragraphs: [] }), beats: [beat, { ...beat, anchor: 'top' }] };
   expect(() => validateScript(script)).not.toThrow();
   expect(() => validateEditorial({ id: 'demo', channel: 'youtube-shorts', captionOptions: { typography: { locale: 'ko', fonts: [{ family: 'fixture', from: 'fixture.ttf' }] } }, captions: [{ id: 'proof', start: 0, end: 3, text, role: beat.role, focusChunks: beat.focusChunks, focusCues: beat.focusCues }] })).not.toThrow();

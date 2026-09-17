@@ -99,11 +99,33 @@ describe('focused demo captions', () => {
     expect(browser.map((frame) => frame.options.activeWordIndex)).toEqual([0, 1, 2, 3, 4, null]);
     expect(browser.map((frame) => frame.atMs)).toEqual([0, 420, 840, 1260, 1680, 2100]);
     const directed = buildCaptionFrames([
-      { atMs: 0, text, focusChunks, focusCues: [{ at: 0, chunk: 0, word: 0 }, { at: 1.2, chunk: 0, word: 4 }, { at: 2, chunk: 0, word: null }] },
+      { atMs: 0, text, focusChunks, focusCues: [0, 1, 2, 3, 4, null].map((word, index) => ({ at: index * 0.45, chunk: 0, word })) },
       { atMs: 4000, text: '' },
     ], options).filter((frame) => frame.text);
-    expect(directed.map((frame) => frame.text)).toEqual([text, text, text]);
-    expect(directed.map((frame) => frame.options.activeWordIndex)).toEqual([0, 4, null]);
+    expect(directed.every((frame) => frame.text === text)).toBe(true);
+    expect(directed.map((frame) => frame.options.activeWordIndex)).toEqual([0, 1, 2, 3, 4, null]);
+  });
+
+  test.each([
+    [2, null], [0, 2, null], [0, 1], [0, 1, 0, 2], [null, 0, 1, 2], [0, null, 1, 2],
+  ])('rejects skipped, reordered or prematurely released focus words (%j)', (...words) => {
+    const focusCues = words.map((word, index) => ({ at: index * 0.4, chunk: 0, word }));
+    expect(() => buildCaptionFrames([
+      { atMs: 0, text: 'Keep every word', focusChunks: ['Keep every word'], focusCues },
+      { atMs: 3000, text: '' },
+    ], { mode: 'focus' })).toThrow('focusCues');
+  });
+
+  test('custom timing keeps every word animated across authored phrase boundaries', () => {
+    const focusCues = [
+      { at: 0, chunk: 0, word: 0 }, { at: 0.4, chunk: 0, word: 1 }, { at: 0.8, chunk: 0, word: null },
+      { at: 1.2, chunk: 1, word: 0 }, { at: 1.6, chunk: 1, word: 1 }, { at: 2, chunk: 1, word: null },
+    ];
+    const caption = { atMs: 0, text: 'Translate now. Restore anytime.', focusChunks: ['Translate now.', 'Restore anytime.'], focusCues };
+    const build = (cues) => buildCaptionFrames([{ ...caption, focusCues: cues }, { atMs: 3000, text: '' }], { mode: 'focus' });
+    expect(build(focusCues).filter((f) => f.text).map((f) => f.options.activeWordIndex)).toEqual([0, 1, null, 0, 1, null]);
+    expect(() => build(focusCues.filter((cue) => cue.chunk !== 1 || cue.word !== 0))).toThrow('focusCues');
+    expect(() => build(focusCues.map((cue, i) => i === 1 ? { ...cue, at: 0.01 } : cue))).toThrow('at least 120ms');
   });
 
   test.each([

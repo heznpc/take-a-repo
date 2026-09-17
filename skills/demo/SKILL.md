@@ -74,7 +74,9 @@ LLM or translate by itself. This is captioned video, not synthesized speech.
    `anchor`, `text`, `holdMs`, plus optional `focusChunks` and `focusCues` from
    `brief.editorialContract.captionSchema`.
    Keep a short complete caption together with `focusChunks:[text]`, changing
-   emphasis with cues. Do not replace a modifier with its noun in the next card;
+   emphasis on every word in reading order. Omit cues for automatic timing;
+   optional cues may adjust timing but must not skip words or substitute
+   agent-selected keywords. Do not replace a modifier with its noun in the next card;
    multiple temporal chunks must be independently readable statements.
    Choose semantic roles and top or returned heading anchors in the order the story needs. Opening, closing and
    returning to the top are optional. Top-level `editorial` records the audience,

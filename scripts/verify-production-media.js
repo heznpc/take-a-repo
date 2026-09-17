@@ -110,14 +110,19 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
     // Styles are effective, and ordinary capture honors the saved edit too.
     await editProduction(config, { baseRevision: 2, operations: [{ deliverable: 'demo', set: {
       captionOptions: { activeColor: '#00ff00', bottomOffset: 430, wordsPerChunk: 1 },
-      captions: [captions[0], { ...captions[1], focusCues: [{ at: 0, chunk: 0, word: 2 }, { at: 0.8, chunk: 0, word: null }] }],
+      captions: [captions[0], { ...captions[1], focusCues: [0, 1, 2, null].map((word, index) => ({ at: index * 0.4, chunk: 0, word })) }],
     } }] }, opts);
     const restyled = await runProduction(config, opts);
     assert.equal(restyled.machineStatus, 'publish-ready');
     assert.equal(evidenceState(restyled.outDir).editorialReview.status, 'pending', 'new composition needs a fresh critique');
     const restyledTimeline = JSON.parse(fs.readFileSync(path.join(path.dirname(restyled.manifest), 'deliverables/demo-captions/timeline.json')));
     assert.ok(restyledTimeline.frames.some((frame) => frame.text === 'Keep original footage' && frame.activeWordIndex === 2), 'authored phrases override word-count chunking in the rendered track');
-    assert.ok(restyledTimeline.frames.some((frame) => frame.at === 2 && frame.activeWordIndex === null), 'authored cue releases emphasis at the requested output time');
+    assert.deepEqual(restyledTimeline.frames.filter((frame) => frame.text === 'Keep original footage').map((frame) => frame.activeWordIndex), [0, 1, 2, null], 'custom timing preserves every word highlight');
+    assert.ok(restyledTimeline.frames.some((frame) => frame.at === 2.4 && frame.activeWordIndex === null), 'authored cue releases emphasis at the requested output time');
+    const restyledSample = (at) => ffmpeg(['-ss', String(at), '-i', path.join(path.dirname(restyled.manifest), 'deliverables/demo.mp4'), '-vf', 'crop=720:90:0:800', '-frames:v', '1', '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1']);
+    for (const [start, end] of [[1.3, 1.5], [1.7, 1.9], [2.1, 2.3]]) {
+      assert.notDeepEqual(restyledSample(start), restyledSample(end), `each authored word keeps its pop animation at ${start}s`);
+    }
     const restyledVideo = path.join(path.dirname(restyled.manifest), 'deliverables/demo.mp4');
     assert.notEqual(sha256File(video), sha256File(restyledVideo));
     const ordinary = await capture(config, opts);

@@ -167,7 +167,7 @@ function buildFocusCaptionFrames(caption, segments, chunks, nextAtMs, focus, typ
   if (caption.focusCues !== undefined) {
     const cues = caption.focusCues;
     if (!caption.focusChunks || !Array.isArray(cues) || !cues.length || cues.length > 80) throw new Error('focusCues requires authored focusChunks and 1..80 cues');
-    let previousMs = -1, previousChunk = 0;
+    let previousMs = -1, previousChunk = 0, highlightedWords = 0;
     const frames = cues.map((cue, index) => {
       const chunk = chunks[cue?.chunk];
       const offset = Math.round(cue?.at * 1000);
@@ -179,10 +179,20 @@ function buildFocusCaptionFrames(caption, segments, chunks, nextAtMs, focus, typ
         || (cue.word !== null && (!Number.isInteger(cue.word) || cue.word < 0 || cue.word >= chunk.items.length))) {
         throw new Error('focusCues requires ordered in-range times, consecutive chunks and a word index or null');
       }
+      // Cues customize timing, not which words receive the Shorts animation.
+      // Keeping the full sentence visible must not silently become keyword-only motion.
+      if (cue.word === null) {
+        if (highlightedWords !== chunk.start + chunk.items.length) throw new Error('focusCues may release emphasis only after every word in the phrase');
+      } else {
+        if (chunk.start + cue.word !== highlightedWords) throw new Error('focusCues must highlight every word in reading order; omit cues for automatic timing');
+        highlightedWords++;
+        const endMs = index + 1 < cues.length ? Math.round(cues[index + 1]?.at * 1000) : nextAtMs - caption.atMs;
+        if (endMs - offset < MIN_FOCUS_FRAME_MS) throw new Error('focusCues must leave at least 120ms for each word highlight');
+      }
       previousMs = offset; previousChunk = cue.chunk;
       return focusFrame(caption, caption.atMs + offset, chunkCaptionSegments(segments, chunk.start, chunk.items.length), cue.word, typography);
     });
-    if (previousChunk !== chunks.length - 1) throw new Error('focusCues must show every authored phrase');
+    if (highlightedWords !== segments.length) throw new Error('focusCues must highlight every word in reading order; omit cues for automatic timing');
     for (let index = 0; index < chunks.length; index++) {
       const first = cues.find((cue) => cue.chunk === index);
       const next = cues.find((cue) => cue.chunk === index + 1);

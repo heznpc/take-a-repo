@@ -148,10 +148,12 @@ rendered from the shipped code. By default, it also writes a handoff pack:
   Keep short complete captions on screen with `focusChunks:[caption.text]`;
   never separate a modifier from its noun across successive caption cards.
   A spatial line break is different from replacing one part with another.
-  If needed, measure wrapping/font size or rewrite the full sentence. Use optional `focusCues` to
-  emphasize an authored word at the relevant event. `word:null` releases emphasis
-  during a product-reading hold. Choose a stable caption lane from actual frames,
-  not an arbitrary universal bottom offset.
+  If needed, measure wrapping/font size or rewrite the full sentence. Keep the
+  Shorts animation on every word in reading order; do not select only important
+  words when fixing sentence boundaries. Omit `focusCues` for automatic `wordMs`
+  timing. Optional cues adjust timing while preserving every word highlight;
+  `word:null` releases emphasis only after the complete phrase. Choose a stable
+  caption lane from actual frames, not an arbitrary universal bottom offset.
 - Locale typography is a harness contract, not a prompt-only suggestion. Set
   `typography.locale`, `family`, `minFontSize`, `maxFontSize`, `maxLines`, and
   one or more `fonts[].from` paths. take-a-repo preserves authored separators,
