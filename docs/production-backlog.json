@@ -26,10 +26,23 @@
       "id": "preserve-caption-direction",
       "request": "기존 영어 애니메이션 자막보다 퇴보하지 않는다",
       "priorState": "production 경로에서 기존 focus 렌더링과 품질 검증 누락",
-      "status": "implemented",
+      "status": "partial",
+      "acceptance": "focus 애니메이션의 기술적 동등성은 복구했지만 그것을 연출 품질 충족으로 간주하지 않는다. 실제 영상에서 언어별 의미 단위·구도·문구 전환·정지 시간을 검토한다.",
       "verification": [
         "scripts/verify-production-media.js",
         "test/production-caption-qa.test.js"
+      ]
+    },
+    {
+      "id": "caption-phrase-composition",
+      "request": "한국어 자막 위치와 단어 끊김을 실제 영상 기준으로 수정한다",
+      "priorState": "단어 개수 중심 분할로 그대로 같은 단어가 홀로 남고, 자막 위치를 실제 구도와 대조하지 않음",
+      "status": "implemented",
+      "acceptance": "focusChunks로 저자가 정한 의미 단위를 유지하고 전체 문구 보존을 검증한다. 실제 영상은 본문을 가리지 않는 중앙 자막 배치로 재렌더하고 전환 전후 프레임을 검토한다. 기계 QA 통과는 편집 품질 승인으로 보고하지 않는다.",
+      "verification": [
+        "test/demo-caption-focus.test.js",
+        "test/production.test.js",
+        "scripts/verify-production-media.js"
       ]
     },
     {

@@ -130,10 +130,40 @@ function captionChunks(words, wordsPerChunk) {
     chunks.push({ start, items: words.slice(start, start + size) });
     start += size;
   }
+  // wordsPerChunk is a target. Allow one extra word rather than strand a
+  // trailing word (e.g. five words at a target of two become 2 + 3).
+  if (wordsPerChunk > 1 && chunks.length > 1 && chunks.at(-1).items.length === 1) {
+    const last = chunks.pop();
+    chunks.at(-1).items.push(...last.items);
+  }
   return chunks;
 }
 
-function buildFocusCaptionFrames(caption, segments, nextAtMs, focus, typography) {
+function authoredCaptionChunks(caption, segments) {
+  if (caption.focusChunks === undefined) return null;
+  if (!Array.isArray(caption.focusChunks) || !caption.focusChunks.length
+    || caption.focusChunks.some((chunk) => typeof chunk !== 'string' || !chunk.trim())) {
+    throw new Error('take-a-repo: focusChunks must be a nonempty array of authored phrases');
+  }
+  let start = 0;
+  const chunks = caption.focusChunks.map((text) => {
+    // Match complete source segments, retaining punctuation and spacing. A
+    // phrase boundary cannot drop/reorder copy or split a word in half.
+    for (let end = start + 1; end <= segments.length; end++) {
+      const items = chunkCaptionSegments(segments, start, end - start);
+      if (composeCaptionSegments(items) === text.trim()) {
+        const chunk = { start, items };
+        start = end;
+        return chunk;
+      }
+    }
+    throw new Error('take-a-repo: focusChunks must partition the complete caption at word boundaries, preserving its text');
+  });
+  if (start !== segments.length) throw new Error('take-a-repo: focusChunks must preserve every caption word');
+  return chunks;
+}
+
+function buildFocusCaptionFrames(caption, segments, chunks, nextAtMs, focus, typography) {
   const availableMs = nextAtMs - caption.atMs;
   const hasBoundary = Number.isFinite(availableMs);
   const desiredMs = segments.length * focus.wordMs;
@@ -143,7 +173,6 @@ function buildFocusCaptionFrames(caption, segments, nextAtMs, focus, typography)
     cadenceMs = Math.floor(availableMs / segments.length);
   }
   if (!hasBoundary || cadenceMs >= MIN_FOCUS_FRAME_MS) {
-    const chunks = captionChunks(segments, focus.wordsPerChunk);
     return segments.map((_segment, wordIndex) => {
       const chunk = chunks.find((candidate) => (
         wordIndex >= candidate.start && wordIndex < candidate.start + candidate.items.length
@@ -158,11 +187,11 @@ function buildFocusCaptionFrames(caption, segments, nextAtMs, focus, typography)
     });
   }
 
-  const chunks = captionChunks(segments, focus.wordsPerChunk)
+  const phraseSegments = chunks
     .map((chunk) => chunkCaptionSegments(segments, chunk.start, chunk.items.length));
-  const chunkCadenceMs = Math.floor(availableMs / chunks.length);
+  const chunkCadenceMs = Math.floor(availableMs / phraseSegments.length);
   if (chunkCadenceMs >= MIN_FOCUS_FRAME_MS) {
-    return chunks.map((chunk, index) => focusFrame(
+    return phraseSegments.map((chunk, index) => focusFrame(
       caption,
       caption.atMs + (index * chunkCadenceMs),
       chunk,
@@ -176,6 +205,11 @@ function buildFocusCaptionFrames(caption, segments, nextAtMs, focus, typography)
 
 function buildCaptionFrames(schedule = [], options = {}) {
   const focus = normalizeFocusOptions(options);
+  const typography = normalizeTypographyOptions(options);
+  const prepared = schedule.map((caption) => {
+    const segments = segmentCaptionText(caption.text, typography.locale);
+    return { segments, authoredChunks: authoredCaptionChunks(caption, segments) };
+  });
   if (focus.mode === 'static') {
     return schedule.map((caption) => ({
       ...caption,
@@ -185,10 +219,9 @@ function buildCaptionFrames(schedule = [], options = {}) {
     }));
   }
 
-  const typography = normalizeTypographyOptions(options);
   const frames = [];
   schedule.forEach((caption, captionIndex) => {
-    const segments = segmentCaptionText(caption.text, typography.locale);
+    const { segments, authoredChunks } = prepared[captionIndex];
     const nextAtMs = schedule[captionIndex + 1] ? schedule[captionIndex + 1].atMs : Number.POSITIVE_INFINITY;
     if (!segments.length) {
       frames.push({
@@ -199,7 +232,8 @@ function buildCaptionFrames(schedule = [], options = {}) {
       });
       return;
     }
-    frames.push(...buildFocusCaptionFrames(caption, segments, nextAtMs, focus, typography));
+    const chunks = authoredChunks || captionChunks(segments, focus.wordsPerChunk);
+    frames.push(...buildFocusCaptionFrames(caption, segments, chunks, nextAtMs, focus, typography));
   });
   return frames;
 }

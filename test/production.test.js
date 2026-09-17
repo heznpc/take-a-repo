@@ -198,6 +198,7 @@ test('saved editorial patches are revision-bound, append history and protect evi
     await expect(editProduction(spec, { baseRevision: 2, operations: [{ deliverable: 'demo', set: { [field]: 'forged' } }] }, opts())).rejects.toThrow('protected');
   }
   await expect(editProduction(spec, { baseRevision: 2, operations: [{ deliverable: 'demo', set: { captions: [{ ...caption, end: 0 }] } }] }, opts())).rejects.toThrow();
+  await expect(editProduction(spec, { baseRevision: 2, operations: [{ deliverable: 'demo', set: { captions: [{ ...caption, focusChunks: ['Reusable'] }] } }] }, opts())).rejects.toThrow(/focusChunks/);
   expect(readProject(outDir()).revision).toBe(2);
   expect((await editProduction(spec, { baseRevision: 2, operations: [{ deliverable: 'demo', reset: true }] }, opts())).edits).toEqual({});
 });

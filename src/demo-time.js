@@ -51,6 +51,7 @@ function normalizeDemoCaptions(captions = []) {
       return {
         atMs: parseTimeToMs(caption.at, `at for captions[${index}]`),
         text: String(caption.text),
+        ...(caption.focusChunks === undefined ? {} : { focusChunks: caption.focusChunks }),
         ...(caption.role == null ? {} : { role: caption.role }),
       };
     })

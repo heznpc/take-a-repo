@@ -52,7 +52,7 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
 
     const captions = [
       { id: 'intro', start: 0.2, end: 0.8, text: 'Restore' },
-      { id: 'next', start: 1.2, end: 3.8, text: 'Keep original footage' },
+      { id: 'next', start: 1.2, end: 3.8, text: 'Keep original footage', focusChunks: ['Keep original footage'] },
     ];
     await editProduction(config, { baseRevision: 1, operations: [{ deliverable: 'demo', set: { captions } }] }, opts);
     const repaired = await runProduction(config, opts);
@@ -87,9 +87,11 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
     assert.equal(recovered.machineStatus, 'publish-ready');
 
     // Styles are effective, and ordinary capture honors the saved edit too.
-    config.evidence.deliverables[0].captionOptions = { activeColor: '#00ff00', bottomOffset: 430 };
+    config.evidence.deliverables[0].captionOptions = { activeColor: '#00ff00', bottomOffset: 430, wordsPerChunk: 1 };
     const restyled = await runProduction(config, opts);
     assert.equal(restyled.machineStatus, 'publish-ready');
+    const restyledTimeline = JSON.parse(fs.readFileSync(path.join(path.dirname(restyled.manifest), 'deliverables/demo-captions/timeline.json')));
+    assert.ok(restyledTimeline.frames.some((frame) => frame.text === 'Keep original footage' && frame.activeWordIndex === 2), 'authored phrases override word-count chunking in the rendered track');
     const restyledVideo = path.join(path.dirname(restyled.manifest), 'deliverables/demo.mp4');
     assert.notEqual(sha256File(video), sha256File(restyledVideo));
     const ordinary = await capture(config, opts);

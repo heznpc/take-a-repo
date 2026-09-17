@@ -125,6 +125,10 @@ test/            → unit tests for the pure/safe modules (no browser)
   Preserve every authored word; `dense-focus-caption` means the agent must
   lengthen the beat or shorten its copy before publishing. `captions.json`
   carries the resolved trim-relative frame timeline for downstream adapters.
+  Author semantic phrases with per-caption `focusChunks` when count-based splits
+  break meaning, especially in localized copy. Keep particles and predicates
+  with their phrase; review the final video's phrase transitions and placement
+  against the visible product. Animation/pixel QA alone is not editorial approval.
   Add Whisper-style alignment only as an optional future audio adapter; silent
   product demos already have deterministic caption timing.
 - **Localized typography is measured, not guessed**: localized publishing

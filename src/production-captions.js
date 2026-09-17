@@ -12,7 +12,10 @@ const frameAt = (seconds) => Math.ceil(seconds * CAPTION_FPS - 1e-8);
 
 function captionSchedule(captions) {
   // A hide event closes each authored interval, including the last caption.
-  return captions.flatMap((caption) => [{ atMs: caption.start * 1000, text: caption.text }, { atMs: caption.end * 1000, text: '' }]);
+  return captions.flatMap((caption) => [{
+    atMs: caption.start * 1000, text: caption.text,
+    ...(caption.focusChunks === undefined ? {} : { focusChunks: caption.focusChunks }),
+  }, { atMs: caption.end * 1000, text: '' }]);
 }
 
 async function renderCaptionTrack({ captions, options, viewport, duration, directory, cwd, protectedRegions = [] }) {

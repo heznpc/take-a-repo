@@ -48,21 +48,21 @@ describe('focused demo captions', () => {
       },
       {
         atMs: 900,
-        text: 'whole lesson',
-        focusWords: ['whole', 'lesson'],
+        text: 'whole lesson now',
+        focusWords: ['whole', 'lesson', 'now'],
         activeWordIndex: 0,
       },
       {
         atMs: 1100,
-        text: 'whole lesson',
-        focusWords: ['whole', 'lesson'],
+        text: 'whole lesson now',
+        focusWords: ['whole', 'lesson', 'now'],
         activeWordIndex: 1,
       },
       {
         atMs: 1300,
-        text: 'now',
-        focusWords: ['now'],
-        activeWordIndex: 0,
+        text: 'whole lesson now',
+        focusWords: ['whole', 'lesson', 'now'],
+        activeWordIndex: 2,
       },
     ]);
     expect(frames.every((frame) => frame.sourceText === 'Translate the whole lesson now')).toBe(true);
@@ -84,6 +84,35 @@ describe('focused demo captions', () => {
     ], { mode: 'focus', wordMs: 300 })).toEqual([
       { index: 0, wordCount: 4, availableMs: 500, recommendedMs: 1200 },
     ]);
+  });
+
+  test('keeps authored Korean phrases together while animating each word', () => {
+    const { normalizeDemoCaptions } = require('../src/demo-time');
+    const { captionSchedule } = require('../src/production-captions');
+    const text = 'Claude 같은 전문 용어는 그대로';
+    const focusChunks = ['Claude 같은', '전문 용어는 그대로'];
+    const options = { mode: 'focus', wordsPerChunk: 2, wordMs: 420, typography: { locale: 'ko-KR' } };
+    const browser = buildCaptionFrames(normalizeDemoCaptions([{ at: 0, text, focusChunks }]), options);
+    const production = buildCaptionFrames(captionSchedule([{ start: 0, end: 4, text, focusChunks }]), options).filter((frame) => frame.text);
+    expect(production).toEqual(browser);
+    expect(browser.map((frame) => frame.text)).toEqual([
+      'Claude 같은', 'Claude 같은', '전문 용어는 그대로', '전문 용어는 그대로', '전문 용어는 그대로',
+    ]);
+    expect(browser.map((frame) => frame.options.activeWordIndex)).toEqual([0, 1, 0, 1, 2]);
+    expect(browser.map((frame) => frame.atMs)).toEqual([0, 420, 840, 1260, 1680]);
+  });
+
+  test.each([
+    [], ['One two'], ['two', 'One three'], ['On', 'e two three'], ['One two three!'], [42],
+  ].map((focusChunks) => ({ focusChunks })))('rejects phrase boundaries that alter the authored text (%p)', ({ focusChunks }) => {
+    expect(() => buildCaptionFrames([{ atMs: 0, text: 'One two three', focusChunks }], { mode: 'focus' })).toThrow(/focusChunks/);
+  });
+
+  test('authored Japanese phrases retain their punctuation and unspaced boundaries', () => {
+    const frames = buildCaptionFrames([{ atMs: 0, text: '翻訳結果を確認します。', focusChunks: ['翻訳結果を', '確認します。'] }], {
+      mode: 'focus', typography: { locale: 'ja-JP' },
+    });
+    expect([...new Set(frames.map((frame) => frame.text))]).toEqual(['翻訳結果を', '確認します。']);
   });
 
   test('preserves the full phrase when even chunk pacing is too dense', () => {

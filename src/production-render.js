@@ -9,7 +9,7 @@ const { renderDeliverable } = require('./evidence-render');
 const { normalizeTypographyOptions } = require('./caption-typography');
 const { CAPTION_FPS, captionFrameNumbers, verifyCaptionTrack } = require('./production-caption-qa');
 
-const { captionStyle, normalizeFocusOptions, splitCaptionWords, DEFAULT_FOCUS_WORD_MS } = require('./demo-caption-focus');
+const { buildCaptionFrames, captionStyle, normalizeFocusOptions, splitCaptionWords, DEFAULT_FOCUS_WORD_MS } = require('./demo-caption-focus');
 const { analyzeDemoStoryboard } = require('./demo-storyboard');
 const { captionSchedule, renderCaptionTrack } = require('./production-captions');
 
@@ -53,6 +53,7 @@ function validateEditorial(spec) {
     lastEnd = caption.end;
   }
   captionFrameNumbers(captions);
+  buildCaptionFrames(captionSchedule(captions), options);
   for (const caption of captions) {
     const readingMs = splitCaptionWords(caption.text, typography.locale).length * (options.wordMs || DEFAULT_FOCUS_WORD_MS);
     if ((caption.end - caption.start) * 1000 + 0.01 < readingMs) throw new Error(`${spec.id}: dense-caption ${caption.id}; allow at least ${readingMs}ms or shorten its copy`);

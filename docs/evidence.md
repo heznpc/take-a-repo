@@ -302,6 +302,19 @@ CWS/X retains static defaults. Explicit caption options override channel default
 Unknown style fields fail instead of silently disappearing. Static crop/zoom and
 thumbnail time are honored in both captioned and uncaptioned outputs.
 
+Author meaning-based phrase boundaries with per-caption `focusChunks`, for example
+`text: 'Claude 같은 전문 용어는 그대로', focusChunks: ['Claude 같은', '전문 용어는 그대로']`.
+This works in production edits and timed browser demo captions. Every original
+word, separator and punctuation mark must be preserved at complete word boundaries;
+invalid partitions fail before saving an edit. Word emphasis still animates inside
+each phrase. Without authored phrases, `wordsPerChunk` is a target count, allowing
+one extra word to avoid a trailing singleton (except intentional one-word mode).
+Automatic grouping cannot judge meaning. Review the complete phrase in the final
+video, including its transitions, placement relative to the product, and hold time.
+`position: 'bottom'` centers the caption lane; `bottom-left` reserves the right side
+for channel controls. Choose `bottomOffset` against the actual content and declared
+protected regions. Passing geometry/pixel QA does not establish editorial quality.
+
 Caption intervals must leave enough reading time (authored words times `wordMs`,
 360 ms by default). Storyboard warnings, measured overflow, missing glyphs/fonts,
 and collisions with up to three output-coordinate `protectedRegions` block the

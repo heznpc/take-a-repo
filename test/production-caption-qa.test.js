@@ -35,3 +35,10 @@ test.each([false, 0, 'focus'])('invalid editorial containers fail instead of sil
   expect(() => validateEditorial({ id: 'demo', captions: value })).toThrow('captions must be an array');
   expect(() => validateEditorial({ id: 'demo', captionOptions: value })).toThrow('captionOptions must be an object');
 });
+
+test('editorial validation rejects a phrase edit that loses words before rendering', () => {
+  const spec = { id: 'demo', channel: 'youtube-shorts', captions: [{ id: 'intro', start: 0, end: 4, text: 'Keep original footage', focusChunks: ['Keep original footage'] }] };
+  expect(() => validateEditorial(spec)).not.toThrow();
+  spec.captions[0].focusChunks = ['Keep original'];
+  expect(() => validateEditorial(spec)).toThrow(/focusChunks/);
+});
