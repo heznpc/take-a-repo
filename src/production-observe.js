@@ -3,7 +3,7 @@ const path = require('path');
 const Ajv = require('ajv');
 const { digest, validateEvidenceConfig } = require('./evidence-contract');
 const { readJsonIfExists, safeAssetPath, sha256File, writeJson } = require('./handoff-files');
-const { previousRun, stableJson } = require('./production-cache');
+const { previousRun, stableJson, artifactsIntact } = require('./production-cache');
 const { readProject, applyProject, withProjectLock } = require('./production-project');
 const { observationTool, extractObservationFrames } = require('./production-frames');
 const { resolveChannelProfile } = require('./channels');
@@ -39,8 +39,11 @@ function prepareObservations(config, opts) {
   const selected = opts.source === undefined ? sources : [opts.source];
   const items = selected.map((source) => {
     const [producer, id] = source.split(':');
+    if (previous.report.producers.find((p) => p.id === producer)?.status === 'failed'
+      || previous.report.actions?.some((action) => action.code === 'producer-failed' && (!action.producer || action.producer === producer))) throw new Error(`no intact completed evidence for ${source}; its capture failed`);
     const asset = previous.report.producers.find((p) => p.id === producer)?.assets.find((a) => a.id === id);
     if (!asset?.mediaType.startsWith('video/') || !(asset.qa?.durationSeconds > 0) || !Number.isFinite(asset.qa.durationSeconds)) throw new Error(`missing measured source video: ${source}`);
+    if (!artifactsIntact(previous, [asset])) throw new Error(`source video changed: ${source}; run production run`);
     return { source, asset, file: safeAssetPath(previous.runDir, { outPath: asset.path }), recipe: recipeFor(config, asset.qa.durationSeconds) };
   });
   return { outDir, previous, items, analyzer: analyzerFingerprint() };
@@ -153,6 +156,7 @@ function productionContext(config, opts = {}) {
     frames: selected,
     editContext: { baseRevision: project?.revision ?? null, deliverables: effective.evidence.deliverables.filter((d) => d.kind === 'video' && d.source === item.source).map((d) => ({
       id: d.id, channel: d.channel, trim: d.trim || null, captions: d.captions || [],
+      captionOptions: require('./production-render').resolvedCaptionOptions(d), protectedRegions: d.protectedRegions || [],
       constraints: { durationSeconds: resolveChannelProfile(d.channel).recommendedDurationSeconds, trimMustFitSource: true, maxCaptions: 40, captionTimebase: 'output-seconds', canAddCaptions: item.asset.captionState === 'none' },
     })) },
     metrics: { modelCalls: 0, fullFrames: all.length, returnedFrames: selected.length, fullFrameJsonBytes: fullBytes, returnedFrameJsonBytes: selectedBytes, frameJsonReductionPercent: Math.round((1 - selectedBytes / fullBytes) * 10000) / 100, fullImageBytes: index.frames.reduce((sum, f) => sum + f.bytes, 0), returnedImageBytes: selected.reduce((sum, f) => sum + index.frames.find((frame) => frame.atSeconds === f.atSeconds).bytes, 0), actualModelTokens: null },

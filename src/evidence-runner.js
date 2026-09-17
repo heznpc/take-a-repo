@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { validateEvidenceConfig, digest } = require('./evidence-contract');
 const { fingerprintInputs } = require('./evidence-inputs');
 const { provenance, runProducer, execute } = require('./evidence-producer');
-const { renderDeliverable } = require('./evidence-render');
+const { renderProductionDeliverable } = require('./production-render');
 const { withRunSession } = require('./run-session');
 const { writeJson, sha256File, readJsonIfExists } = require('./handoff-files');
 
@@ -21,7 +21,7 @@ function resolveClaims(spec, producers) {
 }
 
 async function captureEvidence(config, opts = {}) {
-  const spec = validateEvidenceConfig(config);
+  let spec = validateEvidenceConfig(config);
   const cwd = path.resolve(opts.cwd || process.cwd());
   const outDir = path.resolve(cwd, config.outDir || 'product-evidence');
   const log = opts.log || ((message) => console.error(`[take-a-repo] ${message}`));
@@ -34,6 +34,16 @@ async function captureEvidence(config, opts = {}) {
     throw new Error('evidence configs use declared deliverables and `review`, not browser target/no-video/mp4/calibrator flags');
   }
   return withRunSession(outDir, async () => {
+    let savedProject;
+    if (!opts.production) {
+      const { readProject, applyProject, projectReference } = require('./production-project');
+      const project = readProject(outDir);
+      if (project) {
+        config = applyProject(config, project);
+        spec = validateEvidenceConfig(config);
+        savedProject = projectReference(outDir, project);
+      }
+    }
     const id = crypto.randomUUID();
     const runDir = path.join(outDir, 'runs', id);
     fs.mkdirSync(runDir, { recursive: true });
@@ -45,6 +55,7 @@ async function captureEvidence(config, opts = {}) {
     };
     const production = opts.production;
     if (production) report.production = production.record;
+    else if (savedProject) report.production = { project: savedProject };
     const pointer = path.join(outDir, 'take-a-repo-evidence.json');
     const previous = readJsonIfExists(pointer);
     if (previous?.id) report.previousRunId = previous.id;
@@ -84,7 +95,7 @@ async function captureEvidence(config, opts = {}) {
         try {
           const rendered = production
             ? await production.render(delivery, report, runDir)
-            : { files: renderDeliverable(delivery, report, runDir) };
+            : { files: await renderProductionDeliverable(delivery, report, runDir, cwd) };
           const { files, ...renderMetadata } = rendered;
           report.deliverables.push({ ...delivery, ...renderMetadata, status: 'rendered', files: files.map((f) => f.path) });
           report.files.push(...files);
@@ -103,6 +114,7 @@ async function captureEvidence(config, opts = {}) {
       if (report.freshness && fingerprintInputs(cwd, spec.inputs).digest !== report.freshness.digest) throw new Error('capture inputs changed during execution; recapture');
       if (report.buildFingerprint && fingerprintInputs(cwd, spec.buildOutputs).digest !== report.buildFingerprint.digest) throw new Error('build changed during execution; recapture');
       if (production) production.verify();
+      if (savedProject && sha256File(path.join(outDir, savedProject.path)) !== savedProject.sha256) throw new Error('production project changed during execution');
       report.machineStatus = report.actions.length ? 'needs-fix' : 'publish-ready';
     } catch (error) {
       report.actions.push({ code: 'run-failed', owner: 'agent', fix: error.message });

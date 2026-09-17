@@ -327,3 +327,52 @@ test('CLI emits one JSON object and rejects misplaced flags', async () => {
   expect(await runProductionCommand(['production', 'plan', '--fresh', '--json'], io)).toBe(2);
   expect(JSON.parse(stdout)).toMatchObject({ ok: false, code: 2 });
 });
+
+test('missing derived files do not discard intact producer artifacts', async () => {
+  const spec = config();
+  const first = await runProduction(spec, opts());
+  const state = evidenceState(outDir());
+  fs.unlinkSync(path.join(state.runDir, 'deliverables/proof.html'));
+  expect(planProduction(spec, opts())).toMatchObject({ unchanged: false, producers: [{ action: 'reuse' }], deliverables: [{ action: 'render' }] });
+  const repaired = await runProduction(spec, opts());
+  expect(repaired.machineStatus).toBe('publish-ready');
+  expect(repaired.metrics.executedProducers).toBe(0);
+  expect(repaired.manifest).not.toBe(first.manifest);
+  expect(count()).toBe(1);
+});
+
+test('a failed sibling producer does not force verified scenes to execute again', async () => {
+  const spec = config();
+  spec.evidence.producers.push({ id: 'broken', kind: 'cli', command: [process.execPath, '-e', 'process.exit(7)'],
+    reuse: { mode: 'local-inputs', inputs: ['source.txt'], maxAgeSeconds: 3600 } });
+  spec.evidence.claims.push({ id: 'broken', text: 'Must pass', checks: ['broken:checked'] });
+  expect((await runProduction(spec, opts())).machineStatus).toBe('needs-fix');
+  expect(planProduction(spec, opts()).producers.map((p) => p.action)).toEqual(['reuse', 'execute']);
+  const retry = await runProduction(spec, opts());
+  expect(retry.machineStatus).toBe('needs-fix');
+  expect(retry.metrics).toMatchObject({ reusedProducers: 1, executedProducers: 1 });
+  expect(count()).toBe(1);
+  expect(evidenceState(outDir()).publishable).toBe(false);
+});
+
+test('render code changes cannot reuse an obsolete completed candidate or invalidate capture keys', async () => {
+  const { engineFiles, inputState, producerKey } = require('../src/production-cache');
+  const spec = config();
+  await runProduction(spec, opts());
+  for (const stage of ['command', 'browser']) {
+    expect(engineFiles(stage)).not.toContain('src/production-render.js');
+    expect(engineFiles(stage)).not.toContain('src/production-captions.js');
+    expect(engineFiles(stage)).toContain('src/evidence-producer.js');
+  }
+  const a = inputState(spec, cwd, { command: 'collector', browser: 'browser', render: 'old' });
+  const b = inputState(spec, cwd, { command: 'collector', browser: 'browser', render: 'new' });
+  expect(producerKey(a.producers[0], null)).toBe(producerKey(b.producers[0], null));
+  const state = evidenceState(outDir());
+  state.report.production.engine = 'older-renderer';
+  const { writeJson, sha256File } = require('../src/handoff-files');
+  const manifest = path.join(state.runDir, 'run.json');
+  writeJson(manifest, state.report);
+  const pointer = JSON.parse(fs.readFileSync(path.join(outDir(), 'take-a-repo-evidence.json')));
+  writeJson(path.join(outDir(), 'take-a-repo-evidence.json'), { ...pointer, sha256: sha256File(manifest) });
+  expect(planProduction(spec, opts())).toMatchObject({ unchanged: false, producers: [{ action: 'reuse' }] });
+});

@@ -484,7 +484,11 @@ function demoCaptionInitScript(options = {}) {
     }
     root.dataset.visible = text ? 'true' : 'false';
     const fontState = await loadCaptionFonts();
-    const fit = fitCaption(root, typography);
+    // Production intervals may pin a font size; the same measurement path
+    // applies in live capture and offline composition.
+    if (Number.isFinite(nextOptions.fontSize)) root.style.fontSize = `${nextOptions.fontSize}px`;
+    const fit = fitCaption(root, Number.isFinite(nextOptions.fontSize) && typography.enabled
+      ? { ...typography, maxFontSize: nextOptions.fontSize } : typography);
 
     const rect = root.getBoundingClientRect();
     const rootStyle = window.getComputedStyle(root);

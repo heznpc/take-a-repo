@@ -17,12 +17,12 @@ function captionFrameNumbers(captions) {
 function captionPixelError(expected, actual) {
   if (actual.length !== expected.width * expected.height * 3) throw new Error('caption QA frame is missing or incomplete');
   let pixels = 0, error = 0;
-  // The caption renderer owns a dark band and bright text. Compare the actual
-  // glyph pixels with its PNG, allowing H.264 compression without letting the
-  // much larger empty background conceal missing text in an average score.
+  // Compare opaque glyph pixels from the shared transparent overlay.
+  // Excluding background and translucent edges tolerates composition and H.264
+  // without allowing a large empty canvas to conceal missing words.
   for (let pixel = 0; pixel < expected.width * expected.height; pixel++) {
     const rgba = pixel * 4, rgb = pixel * 3;
-    if (Math.max(expected.data[rgba], expected.data[rgba + 1], expected.data[rgba + 2]) <= 128) continue;
+    if (expected.data[rgba + 3] < 250) continue;
     pixels++;
     for (let channel = 0; channel < 3; channel++) error += Math.abs(expected.data[rgba + channel] - actual[rgb + channel]);
   }
@@ -30,24 +30,25 @@ function captionPixelError(expected, actual) {
   return error / (pixels * 3);
 }
 
-function verifyCaptionFrames({ bin, video, overlays, captions, width, height, band }) {
-  const frames = captionFrameNumbers(captions);
-  const frameBytes = width * band * 3;
-  const filter = `select='${frames.map((frame) => `eq(n,${frame})`).join('+')}',crop=${width}:${band}:0:${height - band}`;
-  const decoded = execFileSync(bin, [
-    '-nostdin', '-hide_banner', '-loglevel', 'error', '-i', video, '-an',
-    '-vf', filter, '-fps_mode', 'vfr', '-frames:v', String(frames.length),
-    '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1',
-  ], { stdio: ['ignore', 'pipe', 'pipe'], timeout: ffmpegTimeoutMs(), killSignal: 'SIGKILL', maxBuffer: frameBytes * frames.length + 65536 });
-  if (decoded.length !== frameBytes * frames.length) throw new Error('caption QA could not decode every requested output frame');
-  const samples = captions.map((caption, i) => {
-    const expected = PNG.sync.read(fs.readFileSync(overlays[i]));
-    if (expected.width !== width || expected.height !== band) throw new Error('caption QA reference dimensions do not match');
-    const error = captionPixelError(expected, decoded.subarray(i * frameBytes, (i + 1) * frameBytes));
-    if (error > 40) throw new Error(`caption ${caption.id} is missing or differs from its rendered text in the output video`);
-    return { id: caption.id, atSeconds: frames[i] / CAPTION_FPS, meanPixelError: Math.round(error * 100) / 100 };
-  });
-  return { ok: true, samples };
+function verifyCaptionTrack({ bin, video, samples, width, height }) {
+  const frameBytes = width * height * 3;
+  const results = [];
+  // Bound decoded memory independently of caption/word count.
+  for (let offset = 0; offset < samples.length; offset += 8) {
+    const batch = samples.slice(offset, offset + 8);
+    const decoded = execFileSync(bin, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-i', video, '-an',
+      '-vf', `select='${batch.map((sample) => `eq(n,${sample.frame})`).join('+')}'`, '-fps_mode', 'vfr', '-frames:v', String(batch.length),
+      '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1'],
+    { stdio: ['ignore', 'pipe', 'pipe'], timeout: ffmpegTimeoutMs(), killSignal: 'SIGKILL', maxBuffer: frameBytes * batch.length + 65536 });
+    if (decoded.length !== frameBytes * batch.length) throw new Error('caption QA could not decode every requested word frame');
+    batch.forEach((sample, index) => {
+      const expected = PNG.sync.read(fs.readFileSync(sample.file));
+      const actual = decoded.subarray(index * frameBytes, (index + 1) * frameBytes);
+      const error = captionPixelError(expected, actual);
+      if (error > 40) throw new Error(`caption ${sample.id} is missing or differs at frame ${sample.frame}`);
+      results.push({ id: sample.id, frame: sample.frame, atSeconds: sample.frame / CAPTION_FPS, activeWordIndex: sample.activeWordIndex, meanPixelError: Math.round(error * 100) / 100 });
+    });
+  }
+  return { ok: true, samples: results };
 }
-
-module.exports = { CAPTION_FPS, captionFrameNumbers, captionPixelError, verifyCaptionFrames };
+module.exports = { CAPTION_FPS, captionFrameNumbers, captionPixelError, verifyCaptionTrack };

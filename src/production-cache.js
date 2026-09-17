@@ -13,7 +13,29 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
-function engineFingerprint() {
+function engineFiles(stage) {
+  if (stage === 'render') return ['src', 'schemas', 'package.json'];
+  // Follow the collector's actual local dependencies. The capture() evidence
+  // dispatch is unreachable for a browser producer (nested evidence is rejected).
+  const root = path.resolve(__dirname, '..');
+  const visited = new Set();
+  function visit(file) {
+    if (visited.has(file)) return;
+    visited.add(file);
+    if (!file.endsWith('.js')) return;
+    for (const match of fs.readFileSync(file, 'utf8').matchAll(/require\(['"](\.[^'"]+)['"]\)/g)) {
+      const dependency = require.resolve(path.resolve(path.dirname(file), match[1]));
+      if (dependency === path.join(__dirname, 'evidence-runner.js')) continue;
+      if (stage === 'command' && dependency === path.join(__dirname, 'capture.js')) continue;
+      visit(dependency);
+    }
+  }
+  visit(path.join(__dirname, 'evidence-producer.js'));
+  visit(path.join(__dirname, 'evidence-inputs.js'));
+  return [...visited].map((file) => path.relative(root, file)).sort();
+}
+
+function runtimeFingerprint() {
   const dependencies = Object.keys(require('../package.json').dependencies).map((name) => {
     let directory = path.dirname(require.resolve(name));
     while (true) {
@@ -28,11 +50,19 @@ function engineFingerprint() {
     const result = spawnSync(bin, ['-version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 2000 });
     return [bin, result.status === 0 ? digest(result.stdout) : 'unavailable'];
   });
-  return digest(stableJson({
-    files: fingerprintInputs(path.resolve(__dirname, '..'), ['src', 'schemas', 'package.json']).digest,
+  return {
     node: process.version, platform: process.platform, arch: process.arch, os: os.release(),
     dependencies, mediaTools,
-  }));
+  };
+}
+
+function engineFingerprint(stage = 'render', runtime = runtimeFingerprint()) {
+  return digest(stableJson({ ...runtime, files: fingerprintInputs(path.resolve(__dirname, '..'), engineFiles(stage)).digest }));
+}
+
+function engineFingerprints() {
+  const runtime = runtimeFingerprint();
+  return Object.fromEntries(['render', 'command', 'browser'].map((stage) => [stage, engineFingerprint(stage, runtime)]));
 }
 
 function reusableRun(report) {
@@ -41,8 +71,7 @@ function reusableRun(report) {
   // Rendering cannot invalidate verified footage. All execution, integrity and
   // freshness checks must have completed; this grants no publication authority.
   return report.production?.captureVerified === true
-    && ['needs-fix', 'blocked'].includes(report.machineStatus)
-    && report.actions?.length > 0 && report.actions.every((action) => action.code === 'render-failed');
+    && ['needs-fix', 'blocked'].includes(report.machineStatus);
 }
 
 function validatedRun(outDir, pointer) {
@@ -54,10 +83,6 @@ function validatedRun(outDir, pointer) {
     if (report.id !== pointer.id || report.kind !== 'take-a-repo.evidence-run'
       || !reusableRun(report)) return null;
     const runDir = path.dirname(file);
-    for (const asset of report.files) {
-      const source = safeAssetPath(runDir, { outPath: asset.path });
-      if (!source || sha256File(source) !== asset.sha256) return null;
-    }
     return { report, runDir, manifest: file, reportHash: pointer.sha256 };
   } catch (_error) { return null; }
 }
@@ -85,7 +110,8 @@ function inputState(config, cwd, engine) {
     }
     // Environment values are hashed, never put into reports or model context.
     const environment = Object.fromEntries((reuse.environment || []).map((key) => [key, process.env[key] ?? null]));
-    const key = digest(stableJson({ engine, common, producer, environment, inputs: fingerprintInputs(cwd, reuse.inputs).digest }));
+    const collector = typeof engine === 'string' ? engine : engine[producer.capture ? 'browser' : 'command'];
+    const key = digest(stableJson({ engine: collector, common, producer, environment, inputs: fingerprintInputs(cwd, reuse.inputs).digest }));
     return { id: producer.id, key, maxAgeSeconds: reuse.maxAgeSeconds };
   });
   const buildKey = spec.inputs && spec.buildOutputs
@@ -106,7 +132,22 @@ function reusableProducer(previous, producer, input, key, now = Date.now()) {
   const capturedAt = Date.parse(old?.origin?.finishedAt || old?.finishedAt);
   return !!(key && old?.reuseKey === key && ['executed', 'reused'].includes(old.mode)
     && old.status === 'collected' && old.checks.length && old.checks.every((check) => check.status === 'pass')
-    && Number.isFinite(capturedAt) && now >= capturedAt && now - capturedAt <= input.maxAgeSeconds * 1000);
+    && Number.isFinite(capturedAt) && now >= capturedAt && now - capturedAt <= input.maxAgeSeconds * 1000
+    && artifactsIntact(previous, old.assets));
+}
+
+function artifactsIntact(previous, assets) {
+  if (!previous || !assets?.length || assets.some((asset) => !asset)) return false;
+  try {
+    return assets.every((asset) => {
+      const file = safeAssetPath(previous.runDir, { outPath: asset.path });
+      return file && sha256File(file) === asset.sha256;
+    });
+  } catch (_error) { return false; }
+}
+
+function reusableDelivery(previous, delivery) {
+  return !!delivery && artifactsIntact(previous, delivery.files.map((file) => previous.report.files.find((asset) => asset.path === file)));
 }
 
 function renderKey(spec, report, engine, renderInputs = null) {
@@ -139,4 +180,4 @@ function reuseProducer(previous, runDir, producer) {
   };
 }
 
-module.exports = { stableJson, engineFingerprint, reusableRun, previousRun, inputState, buildState, producerKey, reusableProducer, renderKey, copyArtifacts, reuseProducer };
+module.exports = { stableJson, engineFingerprint, engineFingerprints, engineFiles, artifactsIntact, reusableDelivery, reusableRun, previousRun, inputState, buildState, producerKey, reusableProducer, renderKey, copyArtifacts, reuseProducer };

@@ -34,8 +34,8 @@ Edit example:
   {"id":"intro","start":0,"end":4,"text":"Your product in action"}
 ]}}]}
 
-Caption times are relative to the edited output; captions use a measured band
-below the product. An edit cannot change sources, claims, checks or approvals.
+Caption times are relative to the edited output. Channel caption styles use the
+shared demo overlay (Shorts: focus words and animation). An edit cannot change sources, claims, checks or approvals.
 `;
 
 async function runProductionCommand(argv, io = {}) {

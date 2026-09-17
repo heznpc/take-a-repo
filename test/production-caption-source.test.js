@@ -9,7 +9,7 @@ const { renderDeliverable } = require('../src/evidence-render');
 const { readEvidence } = require('../src/evidence-contract');
 
 let directory;
-const spec = { id: 'demo', kind: 'video', source: 'capture:video', channel: 'x', fit: 'contain', captions: [{ id: 'intro', start: 0, end: 3, text: 'Updated caption' }] };
+const spec = { id: 'demo', kind: 'video', source: 'capture:video', channel: 'x', fit: 'contain', captions: [{ id: 'intro', start: 0, end: 3, text: 'Restore caption' }] };
 const report = (captionState) => ({ producers: [{ id: 'capture', assets: [{ id: 'video', path: 'raw.mp4', mediaType: 'video/mp4', qa: { durationSeconds: 24 }, ...(captionState === undefined ? {} : { captionState }) }] }] });
 beforeEach(() => { directory = fs.mkdtempSync(path.join(os.tmpdir(), 'take-a-repo-caption-source-')); jest.clearAllMocks(); });
 afterEach(() => { fs.rmSync(directory, { recursive: true, force: true }); });

@@ -8,8 +8,10 @@ const { execFileSync } = require('child_process');
 const { chromium } = require('playwright');
 const { runProduction, planProduction, editProduction } = require('../src/production');
 const { observeProduction, productionContext } = require('../src/production-observe');
+const { capture } = require('../src/capture');
+const { sha256File } = require('../src/handoff-files');
 const { evidenceState } = require('../src/evidence-state');
-const { verifyCaptionFrames } = require('../src/production-caption-qa');
+const { verifyCaptionTrack } = require('../src/production-caption-qa');
 const { createDemoController, installDemoCaptionOverlay } = require('../src/demo');
 const { analyzeDemoCaptionMetrics } = require('../src/demo-caption-qa');
 const { findFfmpeg, ffmpegTimeoutMs } = require('../src/video');
@@ -36,21 +38,21 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
       producers: [{ id: 'fixture', kind: 'cli', command: [process.execPath, 'collect.js'],
         reuse: { mode: 'local-inputs', inputs: ['collect.js', 'source.mp4'], maxAgeSeconds: 3600 } }],
       claims: [{ id: 'recorded', text: 'Synthetic source recorded', checks: ['fixture:recorded'] }],
-      deliverables: [{ id: 'demo', kind: 'video', source: 'fixture:video', channel: 'x', fit: 'contain', claims: ['recorded'],
+      deliverables: [{ id: 'demo', kind: 'video', source: 'fixture:video', channel: 'youtube-shorts', fit: 'contain', claims: ['recorded'],
         captions: [{ id: 'intro', start: 0, end: 3, text: 'W'.repeat(240), fontSize: 42 }] }],
     } };
     const opts = { cwd, log: () => {} };
     const first = await runProduction(config, opts);
     assert.equal(first.machineStatus, 'needs-fix');
     assert.equal(evidenceState(first.outDir).publishable, false);
-    assert.match(JSON.parse(fs.readFileSync(first.manifest)).deliverables[0].error, /does not fit/);
+    assert.match(JSON.parse(fs.readFileSync(first.manifest)).deliverables[0].error, /long-caption/);
     assert.equal(planProduction(config, opts).producers[0].action, 'reuse');
     await observeProduction(config, opts);
     assert.equal(productionContext(config, { ...opts, maxFrames: 2 }).frames.length, 2);
 
     const captions = [
-      { id: 'intro', start: 0.2, end: 0.8, text: 'Visible between source frames' },
-      { id: 'next', start: 1.2, end: 2.8, text: 'A second independent caption' },
+      { id: 'intro', start: 0.2, end: 0.8, text: 'Restore' },
+      { id: 'next', start: 1.2, end: 3.8, text: 'Keep original footage' },
     ];
     await editProduction(config, { baseRevision: 1, operations: [{ deliverable: 'demo', set: { captions } }] }, opts);
     const repaired = await runProduction(config, opts);
@@ -62,17 +64,43 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
     const runDir = path.dirname(repaired.manifest);
     const report = JSON.parse(fs.readFileSync(repaired.manifest));
     const measured = report.files.find((asset) => asset.id === 'demo');
-    assert.equal(measured.qa.captions.samples.length, 2);
+    assert.ok(measured.qa.captions.samples.length >= 8);
+    assert.ok(measured.qa.captions.samples.some((sample) => sample.activeWordIndex === 2));
     const video = path.join(runDir, measured.path);
-    const overlays = captions.map((caption) => path.join(runDir, 'deliverables/demo-captions', `${caption.id}.png`));
-    const sampleBand = (at) => ffmpeg(['-ss', String(at), '-i', video, '-vf', 'crop=1280:112:0:608', '-frames:v', '1', '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1']);
-    assert.ok(sampleBand(0.4).some((value) => value > 200), 'the short caption must appear');
-    assert.ok(sampleBand(1).every((value) => value < 40), 'the caption must disappear between intervals');
-    assert.ok(sampleBand(2).some((value) => value > 200), 'the second caption must appear');
+    const timeline = JSON.parse(fs.readFileSync(path.join(runDir, 'deliverables/demo-captions/timeline.json')));
+    assert.equal(timeline.style.mode, 'focus');
+    assert.equal(timeline.style.appearance, 'outline');
+    assert.equal(timeline.style.bottomOffset, 380);
+    assert.ok(timeline.frames.some((frame) => frame.activeWordIndex === 2));
+    const sample = (at) => ffmpeg(['-ss', String(at), '-i', video, '-vf', 'crop=720:90:0:850', '-frames:v', '1', '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1']);
+    assert.ok(sample(0.4).some((value) => value > 200), 'caption appears between 1fps source frames');
+    assert.ok(sample(1).every((value) => value < 40), 'caption disappears between intervals');
+    assert.notDeepEqual(sample(1.2), sample(1.4), 'shared word-pop animation moves within a word');
+    assert.notDeepEqual(sample(1.5), sample(1.8), 'active word changes');
+
+    // A damaged derived output must not cause another product execution.
+    fs.unlinkSync(path.join(runDir, 'deliverables/demo.png'));
+    assert.equal(planProduction(config, opts).producers[0].action, 'reuse');
+    assert.equal(planProduction(config, opts).deliverables[0].action, 'render');
+    const recovered = await runProduction(config, opts);
+    assert.equal(recovered.metrics.executedProducers, 0);
+    assert.equal(recovered.machineStatus, 'publish-ready');
+
+    // Styles are effective, and ordinary capture honors the saved edit too.
+    config.evidence.deliverables[0].captionOptions = { activeColor: '#00ff00', bottomOffset: 430 };
+    const restyled = await runProduction(config, opts);
+    assert.equal(restyled.machineStatus, 'publish-ready');
+    const restyledVideo = path.join(path.dirname(restyled.manifest), 'deliverables/demo.mp4');
+    assert.notEqual(sha256File(video), sha256File(restyledVideo));
+    const ordinary = await capture(config, opts);
+    assert.equal(ordinary.machineStatus, 'publish-ready');
+    assert.equal(sha256File(restyledVideo), sha256File(path.join(path.dirname(ordinary.manifest), 'deliverables/demo.mp4')));
+    assert.equal(evidenceState(ordinary.outDir).publishable, false);
 
     const missingVideo = path.join(cwd, 'missing-captions.mp4');
-    ffmpeg(['-i', video, '-vf', 'drawbox=x=0:y=608:w=1280:h=112:color=black:t=fill', '-an', '-c:v', 'libx264', missingVideo]);
-    assert.throws(() => verifyCaptionFrames({ bin, video: missingVideo, overlays, captions, width: 1280, height: 720, band: 112 }), /missing or differs/);
+    ffmpeg(['-f', 'lavfi', '-i', 'color=black:s=720x1280:r=30:d=21', '-c:v', 'libx264', missingVideo]);
+    const files = fs.readdirSync(path.join(runDir, 'deliverables/demo-captions')).filter((name) => name.startsWith('frame-')).sort();
+    assert.throws(() => verifyCaptionTrack({ bin, video: missingVideo, samples: [{ id: 'intro', frame: 6, file: path.join(runDir, 'deliverables/demo-captions', files[files.length - 1]) }], width: 720, height: 1280 }), /missing or differs/);
 
     const browser = await chromium.launch({ channel: 'chromium', headless: true });
     try {
@@ -88,8 +116,11 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
         assert.deepEqual(analyzeDemoCaptionMetrics(demo.captionMetrics()), []);
       } finally { demo.stop(); }
     } finally { await browser.close(); }
-    console.log(JSON.stringify({ ok: true, checks: ['low-fps caption timing', 'decoded caption presence', 'first-render source reuse', 'failed-render observations', 'approval remains required', 'scheduled hide'], captionQA: measured.qa.captions }));
-  } finally { fs.rmSync(cwd, { recursive: true, force: true }); }
+    console.log(JSON.stringify({ ok: true, checks: ['low-fps caption timing', 'decoded caption presence', 'first-render source reuse', 'failed-render observations', 'approval remains required', 'scheduled hide', 'shared focus motion', 'style changes', 'ordinary capture parity', 'poster repair without recapture'], captionQA: measured.qa.captions }));
+  } finally {
+    if (process.env.TAKE_A_REPO_TEST_KEEP) console.error(`Retained media fixture: ${cwd}`);
+    else fs.rmSync(cwd, { recursive: true, force: true });
+  }
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; });

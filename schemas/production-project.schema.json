@@ -39,7 +39,7 @@
         "start": { "type": "number", "minimum": 0, "maximum": 3600 },
         "end": { "type": "number", "exclusiveMinimum": 0, "maximum": 3600 },
         "text": { "type": "string", "minLength": 1, "maxLength": 240 },
-        "fontSize": { "type": "integer", "minimum": 20, "maximum": 42 }
+        "fontSize": { "type": "integer", "minimum": 18, "maximum": 96 }
       }
     }
   }

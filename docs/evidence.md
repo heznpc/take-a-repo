@@ -291,19 +291,32 @@ the config; reset all obsolete IDs in one patch before running the new config.
 History remains intact. After an interrupted project save, revision numbers may
 skip an orphaned history entry instead of overwriting it. Captions are
 ordered, non-overlapping intervals relative to the edited output, with optional
-`fontSize` from 20 to 42. Invalid edits leave the revision unchanged.
+`fontSize` from 18 to 96 (within declared typography bounds). Invalid edits leave the revision unchanged.
 
-Videos require `fit: 'contain'`. Captions occupy a measured band below the whole
-product frame, never over its UI. The renderer uses Chromium plus ffmpeg and
-checks bounds, glyphs for declared fonts, H.264 dimensions, duration and full
-decoding. Source frames are normalized to 30 fps before caption composition.
-Every caption must cover an output frame; a decoded frame from each caption
-interval is compared with its rendered glyphs to detect missing text.
-Localized captions require config-owned `captionOptions.typography`
-with `locale` and project-local `fonts` (the same font contract as browser demos).
-Font changes invalidate the render without invalidating the footage. This first
-version supports silent videos, trim and static timed captions; no timeline UI,
-multi-clip sequencing, audio editing or upload adapter is included.
+Videos require `fit: 'contain'`. Both ordinary `capture()` and `production run`
+apply saved edits and use the same video renderer. Ordinary capture still executes
+producers; production is the explicit incremental path. Video captions use the
+existing demo overlay, word segmentation, focus keyframes and typography QA.
+Shorts inherits focus/outline, three-word chunks and its safe bottom offset;
+CWS/X retains static defaults. Explicit caption options override channel defaults.
+Unknown style fields fail instead of silently disappearing. Static crop/zoom and
+thumbnail time are honored in both captioned and uncaptioned outputs.
+
+Caption intervals must leave enough reading time (authored words times `wordMs`,
+360 ms by default). Storyboard warnings, measured overflow, missing glyphs/fonts,
+and collisions with up to three output-coordinate `protectedRegions` block the
+candidate. Localized captions require config-owned `captionOptions.typography`
+with `locale` and project-local `fonts`. The renderer samples the shared CSS
+animation on a deterministic 30 fps clock, checks decoded pop/settled word frames,
+and emits a `caption-timeline` JSON artifact with resolved style and word timing.
+No fixed caption band is imposed on video. The screenshot caption-band contract
+is unchanged. This version has no audio editor or multi-clip timeline UI.
+
+Capture dependencies are fingerprinted separately from editorial rendering.
+Changing the offline renderer invalidates output reuse, not intact source footage.
+Each producer and each deliverable is hash-checked independently: a damaged poster
+requires rendering again, and a failed sibling producer does not discard successful
+captures. Failed candidates never become approvable through cache reuse.
 
 Adding editorial captions requires a producer video asset with
 `captionState: 'none'`: an uncaptioned master, not an already captioned export.
@@ -333,7 +346,7 @@ the first production run creates the project and collects fresh evidence because
 older runs have no reuse contract. Subsequent production runs can reuse it.
 Earlier runs and decisions remain in their original directories; approval is
 never transferred to the new candidate. Running the legacy capture command again
-executes the config as before and leaves the saved editorial project intact.
+executes producers again, applies the saved editorial project, and leaves its revision intact.
 
 ### Reusable video observations and bounded context
 

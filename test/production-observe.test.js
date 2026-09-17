@@ -147,7 +147,7 @@ test('rejects missing or tampered source evidence, unknown sources and unbounded
   }
   delete config.production;
   fs.appendFileSync(path.join(runDir, 'source.mp4'), 'tamper');
-  await expect(observeProduction(config, { cwd })).rejects.toThrow(/no intact/);
+  await expect(observeProduction(config, { cwd })).rejects.toThrow(/no intact|source video changed/);
 });
 
 test('long recordings widen the sampling interval to bound analysis work', async () => {

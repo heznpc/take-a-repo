@@ -2,13 +2,20 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const Ajv = require('ajv');
-const { chromium } = require('playwright');
-const { findFfmpeg, ffmpegTimeoutMs } = require('./video');
+const { findFfmpeg, ffmpegTimeoutMs, buildVideoFilter } = require('./video');
 const { resolveChannelProfile } = require('./channels');
 const { measureAsset } = require('./evidence-contract');
 const { renderDeliverable } = require('./evidence-render');
-const { normalizeTypographyOptions, prepareCaptionTypography } = require('./caption-typography');
-const { CAPTION_FPS, captionFrameNumbers, verifyCaptionFrames } = require('./production-caption-qa');
+const { normalizeTypographyOptions } = require('./caption-typography');
+const { CAPTION_FPS, captionFrameNumbers, verifyCaptionTrack } = require('./production-caption-qa');
+
+const { captionStyle, normalizeFocusOptions, splitCaptionWords, DEFAULT_FOCUS_WORD_MS } = require('./demo-caption-focus');
+const { analyzeDemoStoryboard } = require('./demo-storyboard');
+const { captionSchedule, renderCaptionTrack } = require('./production-captions');
+
+function resolvedCaptionOptions(spec) {
+  return { ...(spec.channel ? resolveChannelProfile(spec.channel).captionOptions : {}), ...spec.captionOptions };
+}
 
 const projectSchema = require('../schemas/production-project.schema.json');
 const validateCaption = new Ajv({ allErrors: true }).compile(projectSchema.definitions.caption);
@@ -16,12 +23,18 @@ const validateTrim = new Ajv({ allErrors: true }).compile(projectSchema.definiti
 
 function validateEditorial(spec) {
   if (spec.trim && !validateTrim(spec.trim)) throw new Error(`${spec.id}: invalid trim`);
-  const captions = spec.captions || [];
+  const captions = spec.captions ?? [];
   if (!Array.isArray(captions) || captions.length > 40) throw new Error('captions must be an array of at most 40 entries');
-  const typography = normalizeTypographyOptions(spec.captionOptions);
-  const minFontSize = Math.max(typography.minFontSize, 20);
-  const maxFontSize = Math.min(typography.maxFontSize || 42, 42);
-  if (captions.length && minFontSize > maxFontSize) throw new Error(`${spec.id}: incompatible typography bounds for the caption band`);
+  const options = resolvedCaptionOptions(spec);
+  if (spec.captionOptions != null && (typeof spec.captionOptions !== 'object' || Array.isArray(spec.captionOptions))) throw new Error('captionOptions must be an object');
+  const supported = ['mode', 'appearance', 'position', 'bottomOffset', 'wordsPerChunk', 'wordMs', 'activeColor', 'typography'];
+  if (Object.keys(spec.captionOptions || {}).some((key) => !supported.includes(key))) throw new Error('unsupported captionOptions field');
+  captionStyle(options);
+  normalizeFocusOptions({ ...options, mode: 'focus' });
+  const typography = normalizeTypographyOptions(options);
+  const minFontSize = typography.minFontSize;
+  const maxFontSize = typography.maxFontSize || 96;
+  if (captions.length && minFontSize > maxFontSize) throw new Error(`${spec.id}: incompatible typography bounds`);
   if (captions.some((caption) => /\P{ASCII}/u.test(caption?.text || ''))
     && (typography.locale === 'und' || !typography.fonts.length)) {
     throw new Error(`${spec.id}: localized captions require captionOptions.typography.locale and project-local fonts`);
@@ -40,58 +53,13 @@ function validateEditorial(spec) {
     lastEnd = caption.end;
   }
   captionFrameNumbers(captions);
-}
-
-async function captionImages(captions, width, height, dir, captionOptions, cwd) {
-  const prepared = await prepareCaptionTypography(captionOptions, cwd, captions.map((c) => c.text));
-  if (prepared.report.missingGlyphs?.length) throw new Error('caption font is missing authored glyphs');
-  const typography = normalizeTypographyOptions(captionOptions);
-  const browser = await chromium.launch({ channel: 'chromium', headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
-    await page.setContent('<!doctype html><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#14151a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;padding:12px 32px}p{margin:0;width:100%;text-align:center;font-family:Arial,sans-serif;font-weight:600;line-height:1.25;overflow-wrap:anywhere;white-space:pre-wrap}</style><p></p>');
-    await page.evaluate(async ({ faces, style }) => {
-      for (const face of faces) {
-        const font = new FontFace(face.family, `url(${face.source})`, { weight: face.weight, style: face.style });
-        document.fonts.add(await font.load());
-        if (font.status !== 'loaded') throw new Error(`caption font failed to load: ${face.family}`);
-      }
-      document.documentElement.lang = style.locale;
-      document.documentElement.dir = style.direction;
-      const element = document.querySelector('p');
-      element.style.fontFamily = style.family;
-      if (style.weight) element.style.fontWeight = style.weight;
-      await document.fonts.ready;
-    }, { faces: prepared.runtimeOptions.typography?.fontFaces || [], style: typography });
-    const files = [];
-    for (const caption of captions) {
-      const metrics = await page.evaluate(({ text, fontSize, style, bandHeight }) => {
-        const element = document.querySelector('p');
-        element.textContent = text;
-        const lowerBound = Math.max(style.minFontSize, 20);
-        const max = Math.min(style.maxFontSize || 42, 42);
-        let size = fontSize || Math.max(lowerBound, Math.min(28, max));
-        const min = style.enabled && style.fit === 'shrink' ? lowerBound : size;
-        if (size < lowerBound || size > max) throw new Error('caption fontSize is outside declared typography bounds');
-        let measurement;
-        do {
-          element.style.fontSize = `${size--}px`;
-          const rect = element.getBoundingClientRect();
-          const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
-          measurement = { top: rect.top, bottom: rect.bottom, lines: Math.round(rect.height / lineHeight), width: element.scrollWidth, available: rect.width };
-          if (measurement.lines <= Math.min(style.maxLines, 2) && measurement.top >= 10 && measurement.bottom <= bandHeight - 10 && measurement.width <= rect.width + 1) break;
-        } while (size >= min);
-        return measurement;
-      }, { ...caption, style: typography, bandHeight: height });
-      if (metrics.top < 10 || metrics.bottom > height - 10 || metrics.lines > Math.min(typography.maxLines, 2) || metrics.width > metrics.available + 1) {
-        throw new Error(`caption ${caption.id} does not fit the two-line band; shorten it or reduce fontSize`);
-      }
-      const file = path.join(dir, `${caption.id}.png`);
-      await page.screenshot({ path: file });
-      files.push(file);
-    }
-    return files;
-  } finally { await browser.close(); }
+  for (const caption of captions) {
+    const readingMs = splitCaptionWords(caption.text, typography.locale).length * (options.wordMs || DEFAULT_FOCUS_WORD_MS);
+    if ((caption.end - caption.start) * 1000 + 0.01 < readingMs) throw new Error(`${spec.id}: dense-caption ${caption.id}; allow at least ${readingMs}ms or shorten its copy`);
+  }
+  if (spec.crop || spec.zoom) buildVideoFilter(spec);
+  if (spec.protectedRegions != null && (!Array.isArray(spec.protectedRegions) || spec.protectedRegions.length > 3
+    || spec.protectedRegions.some((r) => !r || !['x', 'y', 'width', 'height'].every((key) => Number.isFinite(r[key])) || r.width <= 0 || r.height <= 0))) throw new Error('protectedRegions requires up to three rectangles');
 }
 
 async function renderProductionDeliverable(spec, report, runDir, cwd = process.cwd()) {
@@ -103,28 +71,33 @@ async function renderProductionDeliverable(spec, report, runDir, cwd = process.c
   const start = spec.trim?.start || 0;
   const duration = spec.trim?.duration || input.qa.durationSeconds;
   if (!(duration > 0) || start + duration > input.qa.durationSeconds + 0.05) throw new Error(`${spec.id}: requested source interval is unavailable; recapture this scene`);
-  const captions = spec.captions || [];
+  const profile = resolveChannelProfile(spec.channel);
+  if (duration < profile.recommendedDurationSeconds.min || duration > profile.recommendedDurationSeconds.max) throw new Error(`${spec.id}: channel duration must be ${profile.recommendedDurationSeconds.min}-${profile.recommendedDurationSeconds.max}s`);
+  if (spec.thumbnail != null && (typeof spec.thumbnail !== 'object' || !Number.isFinite(spec.thumbnail.at) || spec.thumbnail.at < 0 || spec.thumbnail.at >= duration)) throw new Error('thumbnail.at must be inside the edited video');
+  const captions = spec.captions ?? [];
   if (captions.some((caption) => caption.end > duration)) throw new Error(`${spec.id}: caption extends past the edited video`);
+  if (spec.storyboardLint === false) throw new Error('storyboard-lint-disabled: production captions require storyboard QA');
   if (!captions.length) return renderDeliverable(spec, report, runDir);
   if (input.captionState !== 'none') {
     throw new Error(`${spec.id}: source captions are ${input.captionState || 'unknown'}; new captions require a clean source with producer-declared captionState: none. Existing captions in video pixels cannot be replaced by an overlay; supply or recapture an uncaptioned master.`);
   }
   if (spec.fit !== 'contain') throw new Error('production video requires fit: contain');
-  const profile = resolveChannelProfile(spec.channel);
   const { width, height } = profile.viewport;
-  const band = 112;
+  const optionsResolved = resolvedCaptionOptions(spec);
+  const warnings = analyzeDemoStoryboard({ captions: captionSchedule(captions).map((c) => ({ at: c.atMs / 1000, text: c.text })), captionOptions: optionsResolved, trim: { duration }, mp4: true }, { viewport: profile.viewport });
+  if (warnings.length) throw new Error(warnings.map((warning) => `${warning.code}: ${warning.message}; ${warning.fix}`).join('\n'));
   const dir = path.join(runDir, 'deliverables', `${spec.id}-captions`);
   fs.mkdirSync(dir, { recursive: true });
-  const overlays = await captionImages(captions, width, band, dir, spec.captionOptions, cwd);
+  const track = await renderCaptionTrack({ captions, options: optionsResolved, viewport: profile.viewport, duration, directory: dir, cwd, protectedRegions: spec.protectedRegions });
   const bin = findFfmpeg();
   if (!bin) throw new Error('production rendering needs ffmpeg');
   const video = path.join(runDir, 'deliverables', `${spec.id}.mp4`);
   const poster = path.join(runDir, 'deliverables', `${spec.id}.png`);
   const args = ['-nostdin', '-hide_banner', '-loglevel', 'error', '-i', path.join(runDir, input.path)];
-  for (const overlay of overlays) args.push('-loop', '1', '-i', overlay);
-  const filters = [`[0:v]trim=start=${start}:duration=${duration},setpts=PTS-STARTPTS,fps=${CAPTION_FPS},scale=${width}:${height - band}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(${width}-iw)/2:(${height - band}-ih)/2,setsar=1[v0]`];
-  captions.forEach((caption, i) => filters.push(`[v${i}][${i + 1}:v]overlay=0:${height - band}:enable='gte(t,${caption.start})*lt(t,${caption.end})'[v${i + 1}]`));
-  args.push('-filter_complex', filters.join(';'), '-map', `[v${captions.length}]`, '-an', '-t', String(duration), '-r', String(CAPTION_FPS), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', video);
+  args.push('-f', 'concat', '-safe', '0', '-i', track.concat);
+  const framing = spec.crop || spec.zoom ? `${buildVideoFilter(spec)},` : '';
+  const filter = `[0:v]trim=start=${start}:duration=${duration},setpts=PTS-STARTPTS,fps=${CAPTION_FPS},${framing}scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1[base];[1:v]fps=${CAPTION_FPS},format=rgba[captions];[base][captions]overlay=0:0:format=auto,format=yuv420p[out]`;
+  args.push('-filter_complex', filter, '-map', '[out]', '-an', '-t', String(duration), '-r', String(CAPTION_FPS), '-c:v', 'libx264', '-crf', String(profile.mp4.crf), '-pix_fmt', 'yuv420p', '-movflags', '+faststart', video);
   const options = { stdio: ['ignore', 'ignore', 'pipe'], timeout: ffmpegTimeoutMs(), killSignal: 'SIGKILL' };
   execFileSync(bin, args, options);
   const measured = measureAsset(runDir, { id: spec.id, path: path.relative(runDir, video), mediaType: 'video/mp4', role: 'recording', captionState: 'burned-in' });
@@ -133,12 +106,14 @@ async function renderProductionDeliverable(spec, report, runDir, cwd = process.c
     || qa.durationSeconds < profile.recommendedDurationSeconds.min || qa.durationSeconds > profile.recommendedDurationSeconds.max) {
     throw new Error(`production channel QA failed for ${spec.id}`);
   }
-  qa.captions = verifyCaptionFrames({ bin, video, overlays, captions, width, height, band });
-  execFileSync(bin, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-ss', '1', '-i', video, '-frames:v', '1', poster], options);
+  qa.captions = verifyCaptionTrack({ bin, video, samples: track.samples, width, height });
+  const timelineFile = path.join(dir, 'timeline.json');
+  fs.writeFileSync(timelineFile, JSON.stringify({ version: 1, fps: CAPTION_FPS, style: captionStyle(optionsResolved), frames: track.timeline, measurements: track.metrics }, null, 2));
+  execFileSync(bin, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-ss', String(spec.thumbnail?.at ?? profile.thumbnail.at), '-i', video, '-frames:v', '1', poster], options);
   return [measured,
     measureAsset(runDir, { id: `${spec.id}-poster`, path: path.relative(runDir, poster), mediaType: 'image/png', role: 'screenshot' }),
-    ...overlays.map((file, i) => measureAsset(runDir, { id: `${spec.id}-caption-${i}`, path: path.relative(runDir, file), mediaType: 'image/png', role: 'editorial-caption' })),
+    measureAsset(runDir, { id: `${spec.id}-captions`, path: path.relative(runDir, timelineFile), mediaType: 'application/json', role: 'caption-timeline' }),
   ];
 }
 
-module.exports = { validateEditorial, renderProductionDeliverable };
+module.exports = { resolvedCaptionOptions, validateEditorial, renderProductionDeliverable };

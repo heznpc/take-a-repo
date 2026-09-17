@@ -8,7 +8,7 @@ const { digest, validateEvidenceConfig } = require('./evidence-contract');
 const { sha256File, writeJson, readJsonIfExists } = require('./handoff-files');
 const { PROJECT_FILE, readProject, newProject, saveProject, projectReference, applyProject, editProject, withProjectLock } = require('./production-project');
 const { validateEditorial, renderProductionDeliverable } = require('./production-render');
-const { stableJson, engineFingerprint, reusableRun, previousRun, inputState, buildState, producerKey, reusableProducer, renderKey, copyArtifacts, reuseProducer } = require('./production-cache');
+const { stableJson, engineFingerprints, artifactsIntact, reusableDelivery, reusableRun, previousRun, inputState, buildState, producerKey, reusableProducer, renderKey, copyArtifacts, reuseProducer } = require('./production-cache');
 
 function prepare(config, opts = {}) {
   validateEvidenceConfig(config);
@@ -17,8 +17,8 @@ function prepare(config, opts = {}) {
   const project = readProject(outDir) || newProject();
   const effective = applyProject(config, project);
   for (const spec of effective.evidence.deliverables) if (spec.kind === 'video') validateEditorial(spec);
-  const engine = engineFingerprint();
-  const inputs = inputState(effective, cwd, engine);
+  const { render: engine, ...collectors } = engineFingerprints();
+  const inputs = inputState(effective, cwd, collectors);
   const fonts = [...new Set(effective.evidence.deliverables.flatMap((d) => (d.captionOptions?.typography?.fonts || []).map((f) => f.from)))];
   const renderInputs = fonts.length ? fingerprintInputs(cwd, fonts) : null;
   const previous = previousRun(outDir);
@@ -38,10 +38,11 @@ function prepare(config, opts = {}) {
   const marker = readJsonIfExists(path.join(outDir, '.take-a-repo-run.json'));
   const sameCandidate = !!(previous && current?.state === 'completed' && marker?.status === 'completed'
     && current.id === previous.report.id && previous.report.machineStatus === 'publish-ready'
+    && previous.report.production?.engine === engine && artifactsIntact(previous, previous.report.files)
     && producers.every((p) => p.action === 'reuse')
     && previous.report.production?.intentDigest === intentDigest
     && previous.report.production?.project.sha256 === projectHash);
-  return { cwd, outDir, project, effective, engine, inputs, renderInputs, previous, build, reuseBuild, producers, intentDigest, sameCandidate };
+  return { cwd, outDir, project, effective, engine, collectors, inputs, renderInputs, previous, build, reuseBuild, producers, intentDigest, sameCandidate };
 }
 
 function publicPlan(prepared, { fresh = false } = {}) {
@@ -55,7 +56,7 @@ function publicPlan(prepared, { fresh = false } = {}) {
     deliverables: effective.evidence.deliverables.map((spec) => {
       const prior = previous?.report.deliverables.find((d) => d.id === spec.id && d.status === 'rendered');
       const sourceReusable = spec.kind === 'proof' ? allReused : producers.find((p) => p.id === spec.source.split(':')[0])?.action === 'reuse';
-      const sameRecipe = prior && prior.reuseKey === renderKey(spec,
+      const sameRecipe = reusableDelivery(previous, prior) && prior.reuseKey === renderKey(spec,
         { ...previous.report, claims: resolveClaims(effective.evidence, previous.report.producers) }, prepared.engine, prepared.renderInputs?.digest);
       return { id: spec.id, action: !fresh && (prepared.sameCandidate || spec.kind === 'video' && sourceReusable && sameRecipe) ? 'reuse' : 'render' };
     }),
@@ -115,7 +116,7 @@ async function runProduction(config, opts = {}) {
       async render(spec, report, runDir) {
         const key = renderKey(spec, report, p.engine, p.renderInputs?.digest);
         const old = p.previous?.report.deliverables.find((d) => d.id === spec.id && d.status === 'rendered' && d.reuseKey === key);
-        if (!opts.fresh && spec.kind === 'video' && old) {
+        if (!opts.fresh && spec.kind === 'video' && reusableDelivery(p.previous, old)) {
           const files = old.files.map((file) => p.previous.report.files.find((asset) => asset.path === file));
           if (files.some((file) => !file)) throw new Error('cached deliverable file set is incomplete');
           copyArtifacts(p.previous, runDir, files);
@@ -127,7 +128,7 @@ async function runProduction(config, opts = {}) {
       },
       verify() {
         if (sha256File(path.join(outDir, PROJECT_FILE)) !== reference.sha256) throw new Error('production project changed during execution');
-        if (inputState(p.effective, cwd, p.engine).digest !== p.inputs.digest) throw new Error('production inputs changed during execution');
+        if (inputState(p.effective, cwd, p.collectors).digest !== p.inputs.digest) throw new Error('production inputs changed during execution');
         if (p.renderInputs && fingerprintInputs(cwd, p.renderInputs.inputs).digest !== p.renderInputs.digest) throw new Error('caption fonts changed during rendering');
         record.captureVerified = true;
       },

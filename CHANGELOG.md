@@ -6,6 +6,14 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+- Production video now shares demo focus animation, channel defaults, typography,
+  storyboard and protected-region QA. Ordinary capture applies saved edits too;
+  unreadable caption intervals and unsupported style fields fail explicitly.
+- Split capture/output cache validation so renderer updates, damaged posters and
+  failed sibling scenes preserve valid footage. Updated renderers cannot reuse an
+  obsolete completed candidate. Production emits resolved caption timelines.
+
 ### Added
 - Saved production projects and `production plan/run/edit/status` with opt-in
   local-input capture reuse, revision-bound trim/caption edits, measured caption

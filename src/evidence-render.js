@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { findFfmpeg, ffmpegTimeoutMs } = require('./video');
+const { findFfmpeg, ffmpegTimeoutMs, buildVideoFilter } = require('./video');
 const { resolveChannelProfile } = require('./channels');
 const { measureAsset } = require('./evidence-contract');
 
@@ -47,7 +47,8 @@ function renderDeliverable(spec, report, runDir) {
     if (!(spec.trim.start >= 0) || !(spec.trim.duration > 0)) throw new Error('trim requires nonnegative start and positive duration');
     args.push('-ss', String(spec.trim.start), '-t', String(spec.trim.duration));
   }
-  args.push('-vf', `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1`, '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', video);
+  const framing = spec.crop || spec.zoom ? `${buildVideoFilter(spec)},` : '';
+  args.push('-vf', `${framing}scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1`, '-an', '-c:v', 'libx264', '-crf', String(profile.mp4.crf), '-pix_fmt', 'yuv420p', '-movflags', '+faststart', video);
   const options = { stdio: ['ignore', 'ignore', 'pipe'], timeout: ffmpegTimeoutMs(), killSignal: 'SIGKILL' };
   execFileSync(bin, args, options);
   const measured = measureAsset(runDir, { id: spec.id, path: path.relative(runDir, video), mediaType: 'video/mp4', role: 'recording', captionState: input.captionState || 'unknown' });
@@ -56,7 +57,7 @@ function renderDeliverable(spec, report, runDir) {
     || qa.durationSeconds < profile.recommendedDurationSeconds.min || qa.durationSeconds > profile.recommendedDurationSeconds.max) {
     throw new Error(`channel QA failed: expected H.264 ${width}x${height}, ${profile.recommendedDurationSeconds.min}-${profile.recommendedDurationSeconds.max}s`);
   }
-  execFileSync(bin, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-ss', '1', '-i', video, '-frames:v', '1', poster], options);
+  execFileSync(bin, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-ss', String(spec.thumbnail?.at ?? profile.thumbnail.at), '-i', video, '-frames:v', '1', poster], options);
   const thumbnail = measureAsset(runDir, { id: `${spec.id}-poster`, path: path.relative(runDir, poster), mediaType: 'image/png', role: 'screenshot' });
   return [measured, thumbnail];
 }
