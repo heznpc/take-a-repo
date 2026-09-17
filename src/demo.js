@@ -668,6 +668,7 @@ function createDemoController({
 }) {
   const schedule = normalizeDemoCaptions(captions);
   const captionFrames = buildCaptionFrames(schedule, captionOptions);
+  let hasAuthoredCaptions = captionFrames.some((frame) => frame.text);
   const timers = [];
   const captionSamples = [];
   const startedAt = Date.now();
@@ -680,6 +681,7 @@ function createDemoController({
   async function render(text, options = {}, expectedAtMs = null) {
     if (stopped) return;
     activeText = String(text || '');
+    if (activeText) hasAuthoredCaptions = true;
     activeOptions = options || {};
     activeExpectedAtMs = expectedAtMs;
     const authoredOptions = { ...captionOptions, ...activeOptions };
@@ -788,6 +790,7 @@ function createDemoController({
 
     captionMetrics() {
       return {
+        captionState: hasAuthoredCaptions ? 'burned-in' : 'none',
         expectedFrames: captionFrames.map((frame) => ({ atMs: frame.atMs, text: frame.text })),
         samples: captionSamples.map((sample) => ({ ...sample, rect: { ...sample.rect } })),
         typography: typographyReport ? { ...typographyReport } : null,

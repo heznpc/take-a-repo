@@ -109,6 +109,12 @@ test/            → unit tests for the pure/safe modules (no browser)
   headless in CI.
 - **Caption band stacks UNDER the shot** (scene captured at `height - bandHeight`,
   band appended) so the final image is the exact preset size and no UI is hidden.
+- **Reusable video masters must be uncaptioned before adding editorial text**:
+  producer assets declare `captionState: 'none'`, `'burned-in'`, or `'unknown'`.
+  Missing metadata means unknown. New production captions require `none`;
+  overlays cannot replace captions already present in source pixels. Inspect
+  external footage before declaring it clean, preserve an uncaptioned master,
+  and keep subsequent caption edits in the production project.
 - **Demo captions, arrow pointers, and select mirrors overlay the recorded page**, while the
   disclaimer badge stays top-left. Keep this lightweight: one `demo` or several
   `demos[]` entries, timed captions, `demo.caption/step/wait/click/select`, static

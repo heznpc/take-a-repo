@@ -300,6 +300,20 @@ Font changes invalidate the render without invalidating the footage. This first
 version supports silent videos, trim and static timed captions; no timeline UI,
 multi-clip sequencing, audio editing or upload adapter is included.
 
+Adding editorial captions requires a producer video asset with
+`captionState: 'none'`: an uncaptioned master, not an already captioned export.
+Other values are `'burned-in'` and `'unknown'`; omitted metadata means unknown.
+New captions on either are rejected before rendering, because an overlay cannot
+replace text already in the source pixels. Clearing project captions only removes
+the project's own caption layer. Existing videos without new captions remain
+renderable. This is a producer declaration, not an automatic OCR guarantee:
+inspect external footage before declaring it clean. Browser captures carry their
+authored-caption state through the evidence adapter, and rendered captioned
+outputs are marked burned-in. Capture the reusable master without `demo.captions`
+or `demo.caption/step` text, then keep editable captions in the production project.
+An old captioned master must be replaced or recaptured once; subsequent copy
+changes reuse the clean master without another capture.
+
 `plan` returns producer and delivery actions; `run.metrics` reports executed and
 reused producers, rendered and reused deliverables. CLI run/edit responses stay
 compact; `status` and the referenced run report provide details on demand. Review the finished candidate
@@ -362,6 +376,8 @@ so an agent can author an edit
 without loading the entire project or run report. Captions still use output
 seconds; trim uses source seconds. Returned paths are references: the model must
 actually inspect the images before judging their content.
+`source.captionState` and `constraints.canAddCaptions` also explain whether the
+source accepts a new caption layer, before the agent authors a patch.
 
 `observe.metrics` measures analysis/reuse counts and elapsed wall time.
 `context.metrics` compares the same JSON frame-record representation and image

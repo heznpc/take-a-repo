@@ -126,7 +126,7 @@ async function captureDemo({
     height: viewport.height,
     target: demoConfig.target,
     channel: demoConfig.channel,
-    source: { kind: 'demo', name: demoConfig.name, story: demoConfig.story, target: demoConfig.target },
+    source: { kind: 'demo', name: demoConfig.name, story: demoConfig.story, target: demoConfig.target, captionState: captionMetricReport.captionState },
   }, `✓ ${demoConfig.name}.webm (${viewport.width}×${viewport.height})`);
 
   let extra;
@@ -157,7 +157,7 @@ async function captureDemo({
       channel: demoConfig.channel,
       media,
       visual,
-      source: { kind: 'demo', name: demoConfig.name, story: demoConfig.story, target: demoConfig.target },
+      source: { kind: 'demo', name: demoConfig.name, story: demoConfig.story, target: demoConfig.target, captionState: captionMetricReport.captionState },
     });
   }
 

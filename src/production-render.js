@@ -104,6 +104,9 @@ async function renderProductionDeliverable(spec, report, runDir, cwd = process.c
   const captions = spec.captions || [];
   if (captions.some((caption) => caption.end > duration)) throw new Error(`${spec.id}: caption extends past the edited video`);
   if (!captions.length) return renderDeliverable(spec, report, runDir);
+  if (input.captionState !== 'none') {
+    throw new Error(`${spec.id}: source captions are ${input.captionState || 'unknown'}; new captions require a clean source with producer-declared captionState: none. Existing captions in video pixels cannot be replaced by an overlay; supply or recapture an uncaptioned master.`);
+  }
   if (spec.fit !== 'contain') throw new Error('production video requires fit: contain');
   const profile = resolveChannelProfile(spec.channel);
   const { width, height } = profile.viewport;
@@ -122,7 +125,7 @@ async function renderProductionDeliverable(spec, report, runDir, cwd = process.c
   args.push('-filter_complex', filters.join(';'), '-map', `[v${captions.length}]`, '-an', '-t', String(duration), '-r', '30', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', video);
   const options = { stdio: ['ignore', 'ignore', 'pipe'], timeout: ffmpegTimeoutMs(), killSignal: 'SIGKILL' };
   execFileSync(bin, args, options);
-  const measured = measureAsset(runDir, { id: spec.id, path: path.relative(runDir, video), mediaType: 'video/mp4', role: 'recording' });
+  const measured = measureAsset(runDir, { id: spec.id, path: path.relative(runDir, video), mediaType: 'video/mp4', role: 'recording', captionState: 'burned-in' });
   const qa = measured.qa;
   if (qa.codec !== 'h264' || qa.pixelFormat !== 'yuv420p' || qa.width !== width || qa.height !== height
     || qa.durationSeconds < profile.recommendedDurationSeconds.min || qa.durationSeconds > profile.recommendedDurationSeconds.max) {

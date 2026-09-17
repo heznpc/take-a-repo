@@ -147,16 +147,16 @@ function productionContext(config, opts = {}) {
   const fullBytes = bytes(all), selectedBytes = bytes(selected);
   return {
     version: 1, kind: 'take-a-repo.production-context', authority: 'observation-only',
-    source: index.source, sourceRunId: p.previous.report.id, index: file,
+    source: { ...index.source, captionState: item.asset.captionState || 'unknown' }, sourceRunId: p.previous.report.id, index: file,
     range: { from, to, timebase: 'source-seconds', endExclusive: true },
     coverage: { intervalSeconds: index.recipe.intervalSeconds, availableFrames: available, returnedFrames: selected.length, subsampled: available > selected.length, completeEventCoverage: false },
     frames: selected,
     editContext: { baseRevision: project?.revision ?? null, deliverables: effective.evidence.deliverables.filter((d) => d.kind === 'video' && d.source === item.source).map((d) => ({
       id: d.id, channel: d.channel, trim: d.trim || null, captions: d.captions || [],
-      constraints: { durationSeconds: resolveChannelProfile(d.channel).recommendedDurationSeconds, trimMustFitSource: true, maxCaptions: 40, captionTimebase: 'output-seconds' },
+      constraints: { durationSeconds: resolveChannelProfile(d.channel).recommendedDurationSeconds, trimMustFitSource: true, maxCaptions: 40, captionTimebase: 'output-seconds', canAddCaptions: item.asset.captionState === 'none' },
     })) },
     metrics: { modelCalls: 0, fullFrames: all.length, returnedFrames: selected.length, fullFrameJsonBytes: fullBytes, returnedFrameJsonBytes: selectedBytes, frameJsonReductionPercent: Math.round((1 - selectedBytes / fullBytes) * 10000) / 100, fullImageBytes: index.frames.reduce((sum, f) => sum + f.bytes, 0), returnedImageBytes: selected.reduce((sum, f) => sum + index.frames.find((frame) => frame.atSeconds === f.atSeconds).bytes, 0), actualModelTokens: null },
-    guidance: 'Inspect selected frame files. Samples can miss brief events; request a narrower range or denser observations when needed. Trim uses source seconds; caption times use edited-output seconds. Apply edits with baseRevision via production edit, then production run. These observations do not prove current product behavior or grant publication approval.',
+    guidance: 'Inspect selected frame files. Samples can miss brief events; request a narrower range or denser observations when needed. New captions require producer-declared captionState: none; burned-in or unknown captions require an uncaptioned master first. Trim uses source seconds; caption times use edited-output seconds. Apply edits with baseRevision via production edit, then production run. These observations do not prove current product behavior or grant publication approval.',
   };
 }
 

@@ -17,6 +17,7 @@
           "path": { "type": "string", "minLength": 1, "maxLength": 500 },
           "mediaType": { "enum": ["image/png", "video/mp4", "video/webm", "video/quicktime", "application/json", "text/plain", "text/markdown"] },
           "role": { "enum": ["screenshot", "recording", "transcript", "request-response", "check-result", "artifact"] },
+          "captionState": { "enum": ["none", "burned-in", "unknown"], "description": "Producer-declared editorial subtitles already present in video pixels; not OCR verification." },
           "description": { "type": "string", "maxLength": 2000 }
         }
       }

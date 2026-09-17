@@ -50,7 +50,7 @@ function renderDeliverable(spec, report, runDir) {
   args.push('-vf', `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1`, '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', video);
   const options = { stdio: ['ignore', 'ignore', 'pipe'], timeout: ffmpegTimeoutMs(), killSignal: 'SIGKILL' };
   execFileSync(bin, args, options);
-  const measured = measureAsset(runDir, { id: spec.id, path: path.relative(runDir, video), mediaType: 'video/mp4', role: 'recording' });
+  const measured = measureAsset(runDir, { id: spec.id, path: path.relative(runDir, video), mediaType: 'video/mp4', role: 'recording', captionState: input.captionState || 'unknown' });
   const qa = measured.qa;
   if (qa.codec !== 'h264' || qa.pixelFormat !== 'yuv420p' || qa.width !== width || qa.height !== height
     || qa.durationSeconds < profile.recommendedDurationSeconds.min || qa.durationSeconds > profile.recommendedDurationSeconds.max) {

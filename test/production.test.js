@@ -198,6 +198,8 @@ test('render keys retain cached video across reuse labels and invalidate on edit
   producer.checks[0].verification = 'reused-producer-asserted';
   expect(renderKey(video, report, 'engine')).toBe(key);
   expect(renderKey({ ...video, captions: [caption] }, report, 'engine')).not.toBe(key);
+  producer.assets[0].captionState = 'burned-in';
+  expect(renderKey(video, report, 'engine')).not.toBe(key);
   producer.status = 'collected'; producer.reuseKey = 'key';
   expect(reusableProducer({ report }, producer, { maxAgeSeconds: 10 }, 'key', Date.now() + 11_000)).toBe(false);
 });

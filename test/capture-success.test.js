@@ -97,6 +97,6 @@ test('successful demo capture preserves the recording and cleanup order', async 
     skippedDemos: [],
   });
   expect(manifest.assets).toEqual(expect.arrayContaining([
-    expect.objectContaining({ role: 'source-demo-webm', state: 'produced' }),
+    expect.objectContaining({ role: 'source-demo-webm', state: 'produced', source: expect.objectContaining({ captionState: 'none' }) }),
   ]));
 });
