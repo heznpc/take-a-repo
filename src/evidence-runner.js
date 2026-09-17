@@ -25,9 +25,9 @@ async function captureEvidence(config, opts = {}) {
   const cwd = path.resolve(opts.cwd || process.cwd());
   const outDir = path.resolve(cwd, config.outDir || 'product-evidence');
   const log = opts.log || ((message) => console.error(`[take-a-repo] ${message}`));
-  // Raw evidence and decisions are never merged across different executions.
-  // A scoped run explicitly narrows the *new candidate*, not an old whole-pack
-  // approval. Full completion requires a full run and is visible in scope.
+  // Each candidate owns a complete file set and a separate approval. Production
+  // may copy validated cached artifacts while retaining their original capture
+  // provenance; scoped diagnostic runs never acquire a whole-pack approval.
   const scenes = opts.scenes || [];
   for (const name of scenes) if (!spec.producers.some((p) => p.id === name)) throw new Error(`unknown evidence producer: ${name}`);
   if (opts.targets?.length || opts.noVideo || opts.mp4 || opts.calibrate || opts.campaign) {
@@ -43,6 +43,8 @@ async function captureEvidence(config, opts = {}) {
       source: provenance(cwd, config), producers: [], claims: [], deliverables: [], files: [], actions: [],
       machineStatus: 'needs-fix',
     };
+    const production = opts.production;
+    if (production) report.production = production.record;
     const pointer = path.join(outDir, 'take-a-repo-evidence.json');
     const previous = readJsonIfExists(pointer);
     if (previous?.id) report.previousRunId = previous.id;
@@ -52,7 +54,10 @@ async function captureEvidence(config, opts = {}) {
         report.freshness = { root: path.relative(outDir, cwd), ...fingerprintInputs(cwd, spec.inputs) };
         if (opts.noBuild && config.build) throw new Error('evidence with declared inputs requires a fresh build');
       }
-      if (config.build && !opts.noBuild) {
+      if (config.build && production?.reusedBuild) {
+        report.build = production.reusedBuild;
+        log('reuse unchanged build');
+      } else if (config.build && !opts.noBuild) {
         // Same committed-command trust boundary as legacy config.build.
         report.build = {
           command: config.build, startedAt: new Date().toISOString(),
@@ -65,7 +70,9 @@ async function captureEvidence(config, opts = {}) {
       for (const producer of spec.producers) {
         if (scenes.length && !scenes.includes(producer.id)) continue;
         log(`collect ${producer.kind}: ${producer.id}`);
-        const result = await runProducer(producer, { cwd, runDir, log });
+        const result = production
+          ? await production.collect(producer, { cwd, runDir, log }, report)
+          : await runProducer(producer, { cwd, runDir, log });
         report.producers.push(result);
         if (result.status === 'failed') report.actions.push({ code: 'producer-failed', owner: 'agent', producer: producer.id, fix: result.error || 'fix the failing producer checks', retryScenes: [producer.id] });
       }
@@ -75,8 +82,11 @@ async function captureEvidence(config, opts = {}) {
       }
       for (const delivery of spec.deliverables) {
         try {
-          const files = renderDeliverable(delivery, report, runDir);
-          report.deliverables.push({ ...delivery, status: 'rendered', files: files.map((f) => f.path) });
+          const rendered = production
+            ? await production.render(delivery, report, runDir)
+            : { files: renderDeliverable(delivery, report, runDir) };
+          const { files, ...renderMetadata } = rendered;
+          report.deliverables.push({ ...delivery, ...renderMetadata, status: 'rendered', files: files.map((f) => f.path) });
           report.files.push(...files);
         } catch (error) {
           report.deliverables.push({ ...delivery, status: 'failed', files: [], error: error.message });
@@ -92,6 +102,7 @@ async function captureEvidence(config, opts = {}) {
       });
       if (report.freshness && fingerprintInputs(cwd, spec.inputs).digest !== report.freshness.digest) throw new Error('capture inputs changed during execution; recapture');
       if (report.buildFingerprint && fingerprintInputs(cwd, spec.buildOutputs).digest !== report.buildFingerprint.digest) throw new Error('build changed during execution; recapture');
+      if (production) production.verify();
       report.machineStatus = report.actions.length ? 'needs-fix' : 'publish-ready';
     } catch (error) {
       report.actions.push({ code: 'run-failed', owner: 'agent', fix: error.message });
@@ -109,7 +120,7 @@ async function captureEvidence(config, opts = {}) {
     const status = report.machineStatus === 'publish-ready' ? 'awaiting-approval' : report.machineStatus;
     log(`evidence ${id}: ${status}`);
     return { produced: [manifest, ...report.files.map((f) => path.join(runDir, f.path))], outDir, manifest, status, machineStatus: report.machineStatus, exitCode: report.actions.length ? 1 : 0 };
-  });
+  }, { projectToken: opts.production?.projectToken });
 }
 
 module.exports = { captureEvidence, resolveClaims };

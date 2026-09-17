@@ -219,6 +219,102 @@ consumer-specific loaded-bundle observations and approved asset handoff. Consume
 must record the actual runtime version and staged bundle separately when fixture
 patches change the production build. Version equality alone is insufficient.
 
+## Incremental production
+
+`production` is an opt-in path over evidence configs. The ordinary capture path
+continues to execute producers. The production engine makes no model calls;
+`modelCalls: 0` describes this engine, not the surrounding coding agent or custom
+producer commands. Reuse saves repeated capture/render work and lets agents send
+small editorial patches; token savings are not yet benchmarked.
+
+```bash
+node bin/take-a-repo.js production plan examples/evidence --config production.config.js --json
+node bin/take-a-repo.js production run examples/evidence --config production.config.js --json
+node bin/take-a-repo.js production status examples/evidence --config production.config.js --json
+```
+
+Each producer can declare:
+
+```js
+reuse: {
+  mode: 'local-inputs',
+  inputs: ['src', 'fixtures', 'scripts/collect.js', 'package-lock.json'],
+  maxAgeSeconds: 86400, // 1..604800, measured from the ORIGINAL capture
+  environment: ['FEATURE_MODE'], // optional; values are hashed, never recorded
+}
+```
+
+Declare every transitive local dependency and keep outputs outside the inputs.
+Do not enable this for live services, mutable remote URLs or undeclared state.
+Imports cannot opt into execution reuse. The engine checks input bytes, producer
+recipe, declared environment, engine/runtime identity, capture age and every
+cached artifact hash. Build reuse additionally requires `evidence.inputs` and
+`evidence.buildOutputs`; undeclared builds always rebuild and recollect.
+Use `production run --fresh` to force build, capture and rendering.
+Pass `production run --attempt <n>` on retries to enforce the existing
+`automation.maxAttempts` budget; exhausted failures return `blocked`.
+
+No-change runs return the same exact candidate and its current review status.
+New candidates contain independent copies of reused files, the original capture
+run/time/source, and `reused-producer-asserted` checks. They never inherit approval.
+If rendering fails, a separate cache pointer retains the last valid candidate's
+footage for repair; that pointer grants no publication authority. Source changes
+invalidate the current candidate immediately on status/review.
+
+The saved `take-a-repo-project.json` holds bounded editorial overrides; the
+consumer config still owns producers, claims, sources and channel intent.
+`project-history/<project-id>/<revision>.json` preserves each revision. Edits
+require the current `baseRevision` and cannot change evidence or approvals:
+
+```json
+{
+  "baseRevision": 1,
+  "operations": [{
+    "deliverable": "demo-x",
+    "set": {
+      "trim": { "start": 1, "duration": 24 },
+      "captions": [{ "id": "intro", "start": 0, "end": 4, "text": "Show the result first" }]
+    }
+  }]
+}
+```
+
+Save the patch as JSON, then run `take-a-repo production edit <repo> --patch
+<patch.json> --json` and `take-a-repo production run <repo> --json`. Pass the same
+`--config` when using a nondefault config. `set` merges trim/captions overrides;
+`{"deliverable":"demo-x","reset":true}` restores config defaults. Saved edits
+are also removable with `reset` after their deliverable is renamed or removed from
+the config; reset all obsolete IDs in one patch before running the new config.
+History remains intact. After an interrupted project save, revision numbers may
+skip an orphaned history entry instead of overwriting it. Captions are
+ordered, non-overlapping intervals relative to the edited output, with optional
+`fontSize` from 20 to 42. Invalid edits leave the revision unchanged.
+
+Videos require `fit: 'contain'`. Captions occupy a measured band below the whole
+product frame, never over its UI. The renderer uses Chromium plus ffmpeg and
+checks bounds, glyphs for declared fonts, H.264 dimensions, duration and full
+decoding. Localized captions require config-owned `captionOptions.typography`
+with `locale` and project-local `fonts` (the same font contract as browser demos).
+Font changes invalidate the render without invalidating the footage. This first
+version supports silent videos, trim and static timed captions; no timeline UI,
+multi-clip sequencing, audio editing or upload adapter is included.
+
+`plan` returns producer and delivery actions; `run.metrics` reports executed and
+reused producers, rendered and reused deliverables. CLI run/edit responses stay
+compact; `status` and the referenced run report provide details on demand. Review the finished candidate
+with the existing `review <outDir>` command. Editing the project or changing its
+fonts makes the old candidate stale; only a matching final user decision permits
+approved export. Public APIs: `planProduction(config, { cwd })`,
+`runProduction(config, { cwd, fresh })`, `editProduction(config, patch, { cwd })`.
+
+Existing evidence configs, `capture()`, legacy CLI commands and v1 evidence
+reports remain supported. Migrating an output directory requires no file rewrite:
+the first production run creates the project and collects fresh evidence because
+older runs have no reuse contract. Subsequent production runs can reuse it.
+Earlier runs and decisions remain in their original directories; approval is
+never transferred to the new candidate. Running the legacy capture command again
+executes the config as before and leaves the saved editorial project intact.
+
 ## Migration and platform boundary
 
 Canonical package, binary, config, environment prefix, schemas and skills use

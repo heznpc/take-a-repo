@@ -15,6 +15,7 @@ function proofHtml(report, selectedClaims) {
 <small>Run ${escapeHtml(report.id)} · Revision ${escapeHtml(report.source.revision || 'unknown')} · ${report.source.dirty ? 'working tree has changes' : 'clean tree'}</small>
 ${claims.map((c) => `<article><h2>${escapeHtml(c.text)}</h2><strong>${escapeHtml(c.status)}</strong><ul>${c.checks.map((ref) => `<li>${escapeHtml(ref)}</li>`).join('')}</ul></article>`).join('')}
 ${report.producers.map((p) => `<article><h2>${escapeHtml(p.id)} · ${escapeHtml(p.kind)}</h2><p>${escapeHtml(p.mode)} / ${escapeHtml(p.status)}</p>
+${p.mode === 'reused' ? `<p>Reused capture from ${escapeHtml(p.origin?.finishedAt)} · original run ${escapeHtml(p.origin?.runId)}. These checks were not executed again for this candidate.</p>` : ''}
 ${p.checks.map((c) => `<p>${escapeHtml(c.id)}: ${escapeHtml(c.status)} — ${escapeHtml(c.summary)} <small>(${escapeHtml(c.verification)})</small></p>`).join('')}
 ${p.assets.map((a) => { const url = '../' + a.path.split(path.sep).map(encodeURIComponent).join('/'); return `<h3>${escapeHtml(a.description || a.id)}</h3>${a.mediaType === 'image/png' ? `<img src="${url}" alt="${escapeHtml(a.id)}">` : a.mediaType.startsWith('video/') ? `<video controls src="${url}"></video>` : `<p><a href="${url}">${escapeHtml(a.role)}: ${escapeHtml(a.id)}</a></p>`}<small>SHA-256 ${a.sha256}</small>`; }).join('')}
 ${p.error ? `<pre>${escapeHtml(p.error)}</pre>` : ''}</article>`).join('')}
