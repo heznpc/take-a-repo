@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { safeAssetPath, sha256File, readJsonIfExists } = require('./handoff-files');
-const { fingerprintInputs } = require('./evidence-inputs');
+const { fingerprintInputs, fingerprintEnvironment } = require('./evidence-inputs');
 const { digest } = require('./evidence-contract');
 
 function evidenceState(outDir) {
@@ -19,6 +19,32 @@ function evidenceState(outDir) {
   if (report.kind !== 'take-a-repo.evidence-run' || report.version !== 1 || report.id !== pointer.id) throw new Error('invalid evidence run report');
   const runDir = path.dirname(file);
   const problems = [];
+  if (report.production?.project) {
+    const project = report.production.project;
+    const current = safeAssetPath(outDir, { outPath: project.path });
+    try {
+      if (!current || sha256File(current) !== project.sha256) throw new Error('changed');
+    } catch (_error) { problems.push({ code: 'project-changed-render-required' }); }
+  }
+  for (const producer of report.producers) {
+    if (!producer.freshness) continue;
+    try {
+      const root = path.resolve(outDir, producer.freshness.root);
+      if (fingerprintInputs(root, producer.freshness.inputs).digest !== producer.freshness.digest) {
+        problems.push({ code: 'producer-inputs-changed', producer: producer.id });
+      }
+      const environment = producer.freshness.environment;
+      if (environment && fingerprintEnvironment(environment.names).digest !== environment.digest) {
+        problems.push({ code: 'producer-environment-changed', producer: producer.id });
+      }
+    } catch (error) { problems.push({ code: 'producer-inputs-unavailable', producer: producer.id, error: error.message }); }
+  }
+  if (report.production?.renderFreshness) {
+    const expected = report.production.renderFreshness;
+    try {
+      if (fingerprintInputs(path.resolve(outDir, expected.root), expected.inputs).digest !== expected.digest) throw new Error('changed');
+    } catch (_error) { problems.push({ code: 'caption-fonts-changed-render-required' }); }
+  }
   for (const asset of report.files) {
     try {
       const target = safeAssetPath(runDir, { outPath: asset.path });

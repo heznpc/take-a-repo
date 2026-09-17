@@ -32,6 +32,18 @@ The [product evidence contract](docs/evidence.md) covers command producers,
 native media, feature checks, isolated runs, channel rendering and final review.
 The runnable AppKit example is in `examples/evidence/native` (macOS CLI tools).
 
+For repeated releases, `production run` saves an editorial project and reuses
+declared, unchanged local captures. Caption and trim patches rerender existing
+footage; unchanged runs retain the same candidate with no capture or render.
+
+```bash
+node bin/take-a-repo.js production plan examples/evidence --config production.config.js --json
+node bin/take-a-repo.js production run examples/evidence --config production.config.js --json
+```
+
+See [incremental production](docs/evidence.md#incremental-production) for the
+reuse contract, revision-bound edits and the separate approval gate.
+
 For a quick **browser appearance clip**, install Chromium and run
 `node bin/take-a-repo.js demo http://localhost:3000`. This path is capture-only:
 rendering and scrolling a page do not establish that its product features work,

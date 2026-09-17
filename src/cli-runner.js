@@ -117,6 +117,7 @@ async function runCli(argv, io = {}, deps = {}) {
   const loadConfig = deps.loadConfig || ((configPath) => require(configPath));
 
   if (argv[0] === 'demo') return runQuickDemo(argv.slice(1), io, deps);
+  if (argv[0] === 'production') return require('./production-cli').runProductionCommand(argv, io);
   if (['inspect', 'status', 'review'].includes(argv[0])) return require('./evidence-cli').runEvidenceCommand(argv, io);
 
   const opts = parseArgs(argv);

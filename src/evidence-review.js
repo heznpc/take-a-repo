@@ -18,6 +18,7 @@ function reviewHtml(state, token) {
 <meta name="token" content="${token}"><meta name="digest" content="${state.reviewDigest || ''}"><title>Review product evidence</title>
 <link rel="stylesheet" href="/review.css"><script defer src="/review.js"></script><h1>Review product evidence</h1>
 <p>Candidate ${escapeHtml(state.id)} · ${escapeHtml(state.status)}</p><p>Approval covers every listed deliverable and its evidence files. Nothing is uploaded by this tool.</p>
+${(state.report?.producers || []).filter((p) => p.mode === 'reused').map((p) => `<p>Reused capture: ${escapeHtml(p.id)} · originally captured ${escapeHtml(p.origin?.finishedAt)}. Checks were not executed again.</p>`).join('')}
 ${(state.report?.deliverables || []).map((d) => `<section><h2>${escapeHtml(d.id)}</h2>${d.files.map((file) => `<p><a target="_blank" rel="noopener" href="/files/${file.split(path.sep).map(encodeURIComponent).join('/')}">Open ${escapeHtml(file)}</a></p>`).join('')}<label>Requested change for ${escapeHtml(d.id)}<textarea data-id="${escapeHtml(d.id)}" maxlength="2000"></textarea></label></section>`).join('')}
 <button data-status="approved" ${state.status === 'needs-fix' || !state.reviewDigest ? 'disabled' : ''}>Approve entire candidate</button>
 <button data-status="changes-requested" ${!state.reviewDigest ? 'disabled' : ''}>Request changes</button><p id="result" role="status"></p>

@@ -23,4 +23,8 @@ function fingerprintInputs(root, inputs) {
   return { inputs, digest: digest(JSON.stringify(files)), files };
 }
 
-module.exports = { fingerprintInputs };
+function fingerprintEnvironment(names) {
+  return { names, digest: digest(JSON.stringify([...new Set(names)].sort().map((name) => [name, process.env[name] ?? null]))) };
+}
+
+module.exports = { fingerprintInputs, fingerprintEnvironment };

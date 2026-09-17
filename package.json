@@ -84,6 +84,7 @@
   "jest": {
     "collectCoverageFrom": [
       "src/evidence-*.js",
+      "src/production*.js",
       "src/run-session.js",
       "src/channels.js",
       "src/approval.js",

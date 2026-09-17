@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:take-a-repo:production-project:v1",
+  "title": "Editable production project; execution evidence and authority are separate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "kind", "id", "revision", "createdAt", "updatedAt", "edits"],
+  "properties": {
+    "version": { "const": 1 },
+    "kind": { "const": "take-a-repo.production-project" },
+    "id": { "type": "string", "pattern": "^[a-f0-9-]{36}$" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "updatedAt": { "type": "string", "minLength": 1 },
+    "edits": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "trim": { "$ref": "#/definitions/trim" },
+          "captions": { "type": "array", "maxItems": 40, "items": { "$ref": "#/definitions/caption" } }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "trim": {
+      "type": "object", "additionalProperties": false, "required": ["start", "duration"],
+      "properties": {
+        "start": { "type": "number", "minimum": 0, "maximum": 3600 },
+        "duration": { "type": "number", "exclusiveMinimum": 0, "maximum": 3600 }
+      }
+    },
+    "caption": {
+      "type": "object", "additionalProperties": false, "required": ["id", "start", "end", "text"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+        "start": { "type": "number", "minimum": 0, "maximum": 3600 },
+        "end": { "type": "number", "exclusiveMinimum": 0, "maximum": 3600 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "fontSize": { "type": "integer", "minimum": 20, "maximum": 42 }
+      }
+    }
+  }
+}

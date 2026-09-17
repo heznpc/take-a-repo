@@ -31,6 +31,18 @@ node bin/take-a-repo.js review examples/evidence/product-evidence --json
 채널 변환, 최종 승인을 설명했습니다. macOS AppKit 실구동 예제는
 `examples/evidence/native`에 있습니다.
 
+반복 배포에는 `production run`을 사용합니다. 편집 프로젝트를 저장하고,
+명시한 로컬 입력이 같으면 기존 촬영을 재사용합니다. 자막·트림 수정은
+이전 영상으로 다시 렌더하고, 변경 없는 실행은 촬영과 렌더를 건너뜁니다.
+
+```bash
+node bin/take-a-repo.js production plan examples/evidence --config production.config.js --json
+node bin/take-a-repo.js production run examples/evidence --config production.config.js --json
+```
+
+[재사용 계약과 편집 방식](docs/evidence.md#incremental-production)에 입력 선언,
+프로젝트 리비전, 최종 승인 경계를 설명했습니다.
+
 빠른 브라우저 외형 클립은 Chromium 설치 후
 `node bin/take-a-repo.js demo http://localhost:3000`으로 만듭니다.
 이 경로는 캡처 전용입니다. 페이지가 보이는 것만으로 기능 동작을 증명하거나

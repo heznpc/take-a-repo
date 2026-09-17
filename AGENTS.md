@@ -15,6 +15,19 @@ node bin/take-a-repo.js examples/evidence --json
 node bin/take-a-repo.js review examples/evidence/product-evidence --json
 ```
 
+For repeated evidence production with explicit local-input reuse:
+
+```bash
+node bin/take-a-repo.js production plan examples/evidence --config production.config.js --json
+node bin/take-a-repo.js production run examples/evidence --config production.config.js --json
+```
+
+Use this path when the consumer declares `producer.reuse`; do not add reuse for
+live services or undeclared dependencies. `production edit --patch <json>` applies
+revision-bound trim/caption patches, then `production run` rerenders changed
+videos from preserved footage. CLI replies stay compact; inspect the referenced
+run report only when needed. New candidates still require the user's approval.
+
 Read `docs/evidence.md` for the producer/check/claim contract and
 `skills/launch-proof/SKILL.md` for development-completion handoff. Native inputs
 come from real platform tools; do not substitute a web mock. Evidence runs have
@@ -50,6 +63,9 @@ Every run also writes `storyboard.json`, `captions.json`, and
 ```
 src/
   capture.js     → capture(config, opts): the runner (build→launch→shot→caption→promo→video→describe)
+  production.js / production-cli.js → saved project plan/run/edit/status
+  production-project.js / production-cache.js → revisioned edits and verified local-input reuse
+  production-render.js → render trim/caption changes from preserved source footage
   launch.js      → launchWithExtension / closeContext (persistent context, extension-id discovery)
   extension.js   → stageExtension / patchManifestForLocalhost
   serve.js       → serveDirectory (path-traversal-safe localhost fixture server)
