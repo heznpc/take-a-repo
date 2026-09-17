@@ -43,6 +43,11 @@ node bin/take-a-repo.js production run examples/evidence --config production.con
 [재사용 계약과 편집 방식](docs/evidence.md#incremental-production)에 입력 선언,
 프로젝트 리비전, 최종 승인 경계를 설명했습니다.
 
+영상 산출물은 `production observe`로 원본 프레임을 한 번 분석해 저장하고,
+`production context --from 4 --to 12 --max-frames 4 --json`으로 필요한 구간의
+프레임과 현재 편집 revision만 조회할 수 있습니다. JSON·이미지 전달량 감소를
+측정하며, 실제 모델 토큰 절감률은 아직 측정하지 않습니다.
+
 빠른 브라우저 외형 클립은 Chromium 설치 후
 `node bin/take-a-repo.js demo http://localhost:3000`으로 만듭니다.
 이 경로는 캡처 전용입니다. 페이지가 보이는 것만으로 기능 동작을 증명하거나

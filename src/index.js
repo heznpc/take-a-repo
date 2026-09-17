@@ -72,6 +72,8 @@ const {
 
 module.exports = {
   ...require('./production'),
+  observeProduction: require('./production-observe').observeProduction,
+  productionContext: require('./production-observe').productionContext,
   ...require('./evidence-export'),
   fingerprintInputs: require('./evidence-inputs').fingerprintInputs,
   evidenceState: require('./evidence-state').evidenceState,

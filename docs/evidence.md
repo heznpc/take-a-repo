@@ -225,7 +225,8 @@ patches change the production build. Version equality alone is insufficient.
 continues to execute producers. The production engine makes no model calls;
 `modelCalls: 0` describes this engine, not the surrounding coding agent or custom
 producer commands. Reuse saves repeated capture/render work and lets agents send
-small editorial patches; token savings are not yet benchmarked.
+small editorial patches. Observation context measures payload reduction; actual
+model token savings are not yet benchmarked.
 
 ```bash
 node bin/take-a-repo.js production plan examples/evidence --config production.config.js --json
@@ -314,6 +315,62 @@ older runs have no reuse contract. Subsequent production runs can reuse it.
 Earlier runs and decisions remain in their original directories; approval is
 never transferred to the new candidate. Running the legacy capture command again
 executes the config as before and leaves the saved editorial project intact.
+
+### Reusable video observations and bounded context
+
+For configs with video deliverables, run this loop after the first production run:
+
+```bash
+take-a-repo production observe <repo> --json
+take-a-repo production context <repo> --source recorder:video --from 4 --to 12 --max-frames 4 --json
+# Inspect the returned frame paths, author a revision-bound trim/caption patch,
+# then use production edit --patch patch.json and production run.
+```
+
+`observe` samples existing source footage with FFmpeg. It stores PNG frames and
+their actual presentation times, normalized to the source video's start, in an
+immutable index under `observations/`. The atomic `take-a-repo-observations.json`
+pointer selects the latest complete analysis per source. Indexes and frames are
+rehashed on use. Source bytes, sampling settings, analyzer changes or FFmpeg
+changes invalidate analysis reuse; trim/caption edits do not. Interrupted or
+damaged analysis can be rebuilt without modifying evidence runs or approvals.
+These files describe archived footage, not proof that a current build works.
+
+Optional config-owned limits (defaults shown):
+
+```js
+production: {
+  observations: { intervalSeconds: 2, width: 480, maxFrames: 240 },
+}
+```
+
+`width` bounds both thumbnail dimensions. For long recordings the interval grows
+to respect the total frame budget; the actual interval is reported. Allowed
+ranges are 0.25..60 seconds, 160..1280 pixels and 2..1000 frames.
+This first version samples frames only: no transcription, OCR, semantic search,
+automatic scene detection or model call is performed. Brief events between
+samples can be missed. Increase sampling density when the requested edit needs
+more detail; an empty narrow range returns zero frames explicitly.
+
+`context` defaults to an eight-frame overview of the source; `--source` is required
+when multiple sources are configured. Ranges are source seconds, inclusive at
+`from` and exclusive at `to`. At most 2..32 frames may be requested. If a range
+contains more samples, context selects evenly across it and reports the omitted
+count via `coverage`. The result includes the current `baseRevision`, configured
+deliverables, effective saved trim/captions and channel duration constraints,
+so an agent can author an edit
+without loading the entire project or run report. Captions still use output
+seconds; trim uses source seconds. Returned paths are references: the model must
+actually inspect the images before judging their content.
+
+`observe.metrics` measures analysis/reuse counts and elapsed wall time.
+`context.metrics` compares the same JSON frame-record representation and image
+bytes for all stored samples versus the selected subset. It excludes the rest
+of the context envelope and does not compare against every frame of the original
+video. `actualModelTokens: null` is intentional: image tokenization, reasoning
+and provider prompt caching are not measured by this local engine. Public APIs
+are `observeProduction(config, { cwd, source })` and
+`productionContext(config, { cwd, source, from, to, maxFrames })`.
 
 ## Migration and platform boundary
 

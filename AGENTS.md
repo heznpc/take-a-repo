@@ -66,6 +66,7 @@ src/
   production.js / production-cli.js → saved project plan/run/edit/status
   production-project.js / production-cache.js → revisioned edits and verified local-input reuse
   production-render.js → render trim/caption changes from preserved source footage
+  production-observe.js / production-frames.js → reusable source samples and bounded model context
   launch.js      → launchWithExtension / closeContext (persistent context, extension-id discovery)
   extension.js   → stageExtension / patchManifestForLocalhost
   serve.js       → serveDirectory (path-traversal-safe localhost fixture server)

@@ -4,17 +4,24 @@ const { resolveConfigPath } = require('./cli');
 const { planProduction, runProduction, editProduction } = require('./production');
 const { readProject } = require('./production-project');
 const { evidenceState } = require('./evidence-state');
+const { observeProduction, productionContext } = require('./production-observe');
 
-const PRODUCTION_USAGE = `take-a-repo production <plan|run|edit|status> [repo] [options]
+const PRODUCTION_USAGE = `take-a-repo production <plan|run|observe|context|edit|status> [repo] [options]
 
   plan                explain which producers and outputs will be reused
   run                 create/update the saved project and complete candidate
+  observe             index source video frames once; reuse intact observations
+  context             return bounded frame references and current edit state
   edit --patch <json>  apply trim/caption changes against baseRevision
   status              inspect the saved project and current candidate
 
   --config <path>      consumer config (default: take-a-repo.config.js)
   --fresh             run: force a fresh build, capture and render
   --attempt <n>       run: positive retry number for automation.maxAttempts
+  --source <id:asset>  observe/context: configured source video
+  --from <seconds>    context: inclusive source time (default: 0)
+  --to <seconds>      context: exclusive source time (default: duration)
+  --max-frames <n>    context: 2..32 images (default: 8)
   --json              exactly one JSON result; progress goes to stderr
 
 Reuse is opt-in per producer: reuse: { mode: 'local-inputs', inputs: [...],
@@ -41,21 +48,29 @@ async function runProductionCommand(argv, io = {}) {
   try {
     const args = argv.slice(1);
     const action = args.shift();
-    if (!['plan', 'run', 'edit', 'status'].includes(action)) throw new Error('expected production plan, run, edit or status');
+    if (!['plan', 'run', 'observe', 'context', 'edit', 'status'].includes(action)) throw new Error('expected production plan, run, observe, context, edit or status');
     const options = { json };
     let repo = null;
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
       if (arg === '--json') continue;
       if (arg === '--fresh') { options.fresh = true; continue; }
-      if (['--config', '--patch', '--attempt'].includes(arg)) {
+      if (['--config', '--patch', '--attempt', '--source', '--from', '--to', '--max-frames'].includes(arg)) {
         const value = args[++i];
-        if (!value || value.startsWith('-')) throw new Error(`${arg} requires a path`);
+        if (!value || value.startsWith('-')) throw new Error(`${arg} requires a value`);
         options[arg.slice(2)] = value;
       } else if (arg.startsWith('-') || repo !== null) throw new Error(`unexpected argument: ${arg}`);
       else repo = arg;
     }
     if (options.fresh && action !== 'run') throw new Error('--fresh is only supported by production run');
+    if (options.source !== undefined && !['observe', 'context'].includes(action)) throw new Error('--source requires production observe or context');
+    for (const key of ['from', 'to', 'max-frames']) {
+      if (options[key] === undefined) continue;
+      if (action !== 'context' || !Number.isFinite(Number(options[key]))) throw new Error(`--${key} requires a number and production context`);
+      options[key] = Number(options[key]);
+    }
+    if (options.from < 0 || options.to <= 0 || options.from !== undefined && options.to !== undefined && options.to <= options.from
+      || options['max-frames'] !== undefined && (!Number.isInteger(options['max-frames']) || options['max-frames'] < 2 || options['max-frames'] > 32)) throw new Error('invalid context range or frame budget');
     if (options.attempt !== undefined) {
       options.attempt = Number(options.attempt);
       if (action !== 'run' || !Number.isSafeInteger(options.attempt) || options.attempt < 1) throw new Error('--attempt requires a positive integer and production run');
@@ -68,8 +83,10 @@ async function runProductionCommand(argv, io = {}) {
     code = 1;
     const loaded = require(configPath);
     const config = loaded.default || loaded;
-    const opts = { cwd, json, fresh: options.fresh, attempt: options.attempt, log: (message) => stderr.write(`[take-a-repo] ${message}\n`) };
+    const opts = { cwd, json, fresh: options.fresh, attempt: options.attempt, source: options.source, from: options.from, to: options.to, maxFrames: options['max-frames'], log: (message) => stderr.write(`[take-a-repo] ${message}\n`) };
     if (action === 'plan') output({ ok: true, ...planProduction(config, opts) });
+    else if (action === 'observe') output({ ok: true, ...await observeProduction(config, opts) });
+    else if (action === 'context') output({ ok: true, ...productionContext(config, opts) });
     else if (action === 'edit') {
       const patchPath = path.resolve(invocationCwd, options.patch);
       if (fs.statSync(patchPath).size > 256 * 1024) throw new Error('edit patch exceeds 256 KiB');

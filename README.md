@@ -42,7 +42,10 @@ node bin/take-a-repo.js production run examples/evidence --config production.con
 ```
 
 See [incremental production](docs/evidence.md#incremental-production) for the
-reuse contract, revision-bound edits and the separate approval gate.
+reuse and revision contracts. For video deliverables, `production observe` saves
+reusable source frames; `production context --from 4 --to 12 --max-frames 4 --json`
+returns bounded visual context and the current edit revision. Payload metrics
+measure JSON/image reduction; actual model token savings remain unmeasured.
 
 For a quick **browser appearance clip**, install Chromium and run
 `node bin/take-a-repo.js demo http://localhost:3000`. This path is capture-only:
