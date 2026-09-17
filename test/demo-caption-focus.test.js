@@ -86,21 +86,24 @@ describe('focused demo captions', () => {
     ]);
   });
 
-  test('keeps authored Korean phrases together while animating each word', () => {
+  test('keeps a complete Korean proposition visible while animating emphasis', () => {
     const { normalizeDemoCaptions } = require('../src/demo-time');
     const { captionSchedule } = require('../src/production-captions');
     const text = 'Claude 같은 전문 용어는 그대로';
-    const focusChunks = ['Claude 같은', '전문 용어는 그대로'];
+    const focusChunks = [text];
     const options = { mode: 'focus', wordsPerChunk: 2, wordMs: 420, typography: { locale: 'ko-KR' } };
     const browser = buildCaptionFrames(normalizeDemoCaptions([{ at: 0, text, focusChunks }, { at: 4, text: '' }]), options).filter((frame) => frame.text);
     const production = buildCaptionFrames(captionSchedule([{ start: 0, end: 4, text, focusChunks }]), options).filter((frame) => frame.text);
     expect(production).toEqual(browser);
-    expect(browser.map((frame) => frame.text)).toEqual([
-      'Claude 같은', 'Claude 같은', '전문 용어는 그대로', '전문 용어는 그대로', '전문 용어는 그대로',
-      '전문 용어는 그대로',
-    ]);
-    expect(browser.map((frame) => frame.options.activeWordIndex)).toEqual([0, 1, 0, 1, 2, null]);
+    expect(browser.every((frame) => frame.text === text)).toBe(true);
+    expect(browser.map((frame) => frame.options.activeWordIndex)).toEqual([0, 1, 2, 3, 4, null]);
     expect(browser.map((frame) => frame.atMs)).toEqual([0, 420, 840, 1260, 1680, 2100]);
+    const directed = buildCaptionFrames([
+      { atMs: 0, text, focusChunks, focusCues: [{ at: 0, chunk: 0, word: 0 }, { at: 1.2, chunk: 0, word: 4 }, { at: 2, chunk: 0, word: null }] },
+      { atMs: 4000, text: '' },
+    ], options).filter((frame) => frame.text);
+    expect(directed.map((frame) => frame.text)).toEqual([text, text, text]);
+    expect(directed.map((frame) => frame.options.activeWordIndex)).toEqual([0, 4, null]);
   });
 
   test.each([

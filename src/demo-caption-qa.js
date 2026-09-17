@@ -124,7 +124,7 @@ function analyzeDemoCaptionMetrics(report = {}, { viewport, protectedRegions = [
       warnOnce(
         'caption-type-fit-failed',
         `caption "${sample.sourceText || sample.text}" does not fit at the configured minimum size`,
-        'shorten the authored chunk, widen its template lane, or lower typography.minFontSize',
+        'widen the chosen caption lane, fit within the declared typography bounds, or rewrite the complete caption; do not split a dependent phrase into successive cards',
         {
           fontSize: sample.fontSize,
           minFontSize: sample.minFontSize,
@@ -138,7 +138,7 @@ function analyzeDemoCaptionMetrics(report = {}, { viewport, protectedRegions = [
       warnOnce(
         'caption-unbalanced-lines',
         `caption "${sample.sourceText || sample.text}" has an unbalanced final line`,
-        'split the caption at a semantic boundary or adjust the template caption width',
+        'adjust spatial line wrapping or caption width while keeping the complete thought visible; do not replace one dependent phrase with the next',
         { lineWidths: sample.lineWidths, lineBalance: sample.lineBalance, minimum: typography.minLineBalance },
       );
     }
@@ -146,7 +146,7 @@ function analyzeDemoCaptionMetrics(report = {}, { viewport, protectedRegions = [
       warnOnce(
         'caption-too-many-lines',
         `caption "${sample.sourceText || sample.text}" renders on ${sample.lineCount} lines`,
-        'shorten the caption or split it into semantic chunks of at most two lines',
+        'rewrite the complete caption or adjust its layout to fit at most two simultaneous lines',
         { lineCount: sample.lineCount },
       );
     }

@@ -131,7 +131,10 @@ test/            → unit tests for the pure/safe modules (no browser)
   Preserve every authored word; `dense-focus-caption` means the agent must
   lengthen the beat or shorten its copy before publishing. `captions.json`
   carries the resolved trim-relative frame timeline for downstream adapters.
-  Author semantic phrases with per-caption `focusChunks` when count-based splits
+  Keep short complete captions visible together with `focusChunks:[caption.text]`.
+  Change emphasis without replacing the sentence. Do not separate a modifier
+  from its noun or split one proposition merely to meet a word count.
+  Author independent statements with per-caption `focusChunks` when count-based splits
   break meaning, especially in localized copy. Keep particles and predicates
   with their phrase; review the final video's phrase transitions and placement
   against the visible product. Animation/pixel QA alone is not editorial approval.

@@ -143,6 +143,15 @@ fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify({ version: 1,
         assert.ok(demo.captionMetrics().samples.length > 0);
         assert.deepEqual(analyzeDemoCaptionMetrics(demo.captionMetrics()), []);
       } finally { demo.stop(); }
+      await page.setViewportSize({ width: 720, height: 1280 });
+      const sentence = 'Keep this sentence together';
+      const centered = await page.evaluate(async (text) => window.__takeARepoDemoCaption.show(text, {
+        mode: 'focus', appearance: 'outline', position: 'bottom', bottomOffset: 365,
+        focusWords: text.split(' '), activeWordIndex: 0, fullText: text,
+      }), sentence);
+      assert.equal(centered.lineCount, 1, 'centered portrait lane retains the complete sentence at the existing font size');
+      assert.equal(centered.fontSize, 42, 'sentence fitting must not silently shrink an unconfigured font');
+      assert.equal(centered.overflowX, false);
     } finally { await browser.close(); }
     console.log(JSON.stringify({ ok: true, checks: ['low-fps caption timing', 'decoded caption presence', 'first-render source reuse', 'failed-render observations', 'source detail resampling', 'final composite review and cache', 'approval remains required', 'scheduled hide', 'shared focus motion', 'saved style and authored cues', 'ordinary capture parity', 'poster repair without recapture'], captionQA: measured.qa.captions }));
   } finally {

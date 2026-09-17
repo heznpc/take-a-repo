@@ -307,8 +307,14 @@ CWS/X retains static defaults. Explicit caption options override channel default
 Unknown style fields fail instead of silently disappearing. Static crop/zoom and
 thumbnail time are honored in both captioned and uncaptioned outputs.
 
-Author meaning-based phrase boundaries with per-caption `focusChunks`, for example
-`text: 'Claude 같은 전문 용어는 그대로', focusChunks: ['Claude 같은', '전문 용어는 그대로']`.
+Keep a short complete caption visible together with per-caption `focusChunks`, for example
+`text: 'Claude 같은 전문 용어는 그대로', focusChunks: ['Claude 같은 전문 용어는 그대로']`.
+`Claude 같은` modifies `전문 용어`: replacing it with the rest of the sentence
+forces the viewer to reconstruct a single thought across two screens. This is
+not a suitable temporal split. Change emphasis within the complete caption;
+if it does not fit, measure line wrapping/font size within the declared bounds
+or rewrite the complete sentence. Multiple temporal chunks need independently
+readable statements and an editorial reason, not just a word-count target.
 This works in production edits and timed browser demo captions. Every original
 word, separator and punctuation mark must be preserved at complete word boundaries;
 invalid partitions fail before saving an edit. Optional `focusCues` direct emphasis:

@@ -217,6 +217,10 @@ function demoCaptionInitScript(options = {}) {
         #${rootId}[data-mode="focus"][data-position="bottom-left"] {
           left: max(48px, env(safe-area-inset-left));
         }
+        #${rootId}[data-mode="focus"][data-position="bottom"] {
+          width: calc(100vw - 96px);
+          max-width: 660px;
+        }
         #${rootId}[data-mode="focus"][data-condensed="true"] {
           font-size: 25px;
         }

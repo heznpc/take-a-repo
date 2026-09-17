@@ -145,7 +145,10 @@ rendered from the shipped code. By default, it also writes a handoff pack:
   The resolved style is recorded in both caption and storyboard handoff docs;
   `captions.json` also carries the trim-relative rendered `timeline[]`. Treat a
   `dense-focus-caption` lint as an agent-owned timing fix, never drop words.
-  Use `focusChunks` to preserve semantic phrases and optional `focusCues` to
+  Keep short complete captions on screen with `focusChunks:[caption.text]`;
+  never separate a modifier from its noun across successive caption cards.
+  A spatial line break is different from replacing one part with another.
+  If needed, measure wrapping/font size or rewrite the full sentence. Use optional `focusCues` to
   emphasize an authored word at the relevant event. `word:null` releases emphasis
   during a product-reading hold. Choose a stable caption lane from actual frames,
   not an arbitrary universal bottom offset.

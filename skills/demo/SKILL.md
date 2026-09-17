@@ -72,8 +72,11 @@ LLM or translate by itself. This is captioned video, not synthesized speech.
 3. Write an agent-owned JSON file using `brief.contract`: version 1, requested
    language, exact sourceDigest, and 2–8 beats. Each beat has `role`,
    `anchor`, `text`, `holdMs`, plus optional `focusChunks` and `focusCues` from
-   `brief.editorialContract.captionSchema`. Choose semantic roles and top or
-   returned heading anchors in the order the story needs. Opening, closing and
+   `brief.editorialContract.captionSchema`.
+   Keep a short complete caption together with `focusChunks:[text]`, changing
+   emphasis with cues. Do not replace a modifier with its noun in the next card;
+   multiple temporal chunks must be independently readable statements.
+   Choose semantic roles and top or returned heading anchors in the order the story needs. Opening, closing and
    returning to the top are optional. Top-level `editorial` records the audience,
    objective and beat intent; `captionOptions` controls the shared caption style.
    Captions are single-line,
