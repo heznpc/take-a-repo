@@ -14,6 +14,7 @@ const PRODUCTION_USAGE = `take-a-repo production <plan|run|edit|status> [repo] [
 
   --config <path>      consumer config (default: take-a-repo.config.js)
   --fresh             run: force a fresh build, capture and render
+  --attempt <n>       run: positive retry number for automation.maxAttempts
   --json              exactly one JSON result; progress goes to stderr
 
 Reuse is opt-in per producer: reuse: { mode: 'local-inputs', inputs: [...],
@@ -47,7 +48,7 @@ async function runProductionCommand(argv, io = {}) {
       const arg = args[i];
       if (arg === '--json') continue;
       if (arg === '--fresh') { options.fresh = true; continue; }
-      if (['--config', '--patch'].includes(arg)) {
+      if (['--config', '--patch', '--attempt'].includes(arg)) {
         const value = args[++i];
         if (!value || value.startsWith('-')) throw new Error(`${arg} requires a path`);
         options[arg.slice(2)] = value;
@@ -55,6 +56,10 @@ async function runProductionCommand(argv, io = {}) {
       else repo = arg;
     }
     if (options.fresh && action !== 'run') throw new Error('--fresh is only supported by production run');
+    if (options.attempt !== undefined) {
+      options.attempt = Number(options.attempt);
+      if (action !== 'run' || !Number.isSafeInteger(options.attempt) || options.attempt < 1) throw new Error('--attempt requires a positive integer and production run');
+    }
     if (action === 'edit' && !options.patch || action !== 'edit' && options.patch) throw new Error('production edit requires --patch; other actions do not accept it');
     const invocationCwd = (io.processCwd || (() => process.cwd()))();
     const cwd = path.resolve(invocationCwd, repo || '.');
@@ -63,7 +68,7 @@ async function runProductionCommand(argv, io = {}) {
     code = 1;
     const loaded = require(configPath);
     const config = loaded.default || loaded;
-    const opts = { cwd, json, fresh: options.fresh, log: (message) => stderr.write(`[take-a-repo] ${message}\n`) };
+    const opts = { cwd, json, fresh: options.fresh, attempt: options.attempt, log: (message) => stderr.write(`[take-a-repo] ${message}\n`) };
     if (action === 'plan') output({ ok: true, ...planProduction(config, opts) });
     else if (action === 'edit') {
       const patchPath = path.resolve(invocationCwd, options.patch);

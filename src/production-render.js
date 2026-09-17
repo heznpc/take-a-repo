@@ -16,18 +16,24 @@ const validateTrim = new Ajv({ allErrors: true }).compile(projectSchema.definiti
 function validateEditorial(spec) {
   if (spec.trim && !validateTrim(spec.trim)) throw new Error(`${spec.id}: invalid trim`);
   const captions = spec.captions || [];
+  if (!Array.isArray(captions) || captions.length > 40) throw new Error('captions must be an array of at most 40 entries');
   const typography = normalizeTypographyOptions(spec.captionOptions);
+  const minFontSize = Math.max(typography.minFontSize, 20);
+  const maxFontSize = Math.min(typography.maxFontSize || 42, 42);
+  if (captions.length && minFontSize > maxFontSize) throw new Error(`${spec.id}: incompatible typography bounds for the caption band`);
   if (captions.some((caption) => /\P{ASCII}/u.test(caption?.text || ''))
     && (typography.locale === 'und' || !typography.fonts.length)) {
     throw new Error(`${spec.id}: localized captions require captionOptions.typography.locale and project-local fonts`);
   }
-  if (!Array.isArray(captions) || captions.length > 40) throw new Error('captions must be an array of at most 40 entries');
   const ids = new Set();
   let lastEnd = 0;
   for (const caption of captions) {
     if (!validateCaption(caption) || !caption.text.trim() || ids.has(caption.id)
       || caption.end <= caption.start || caption.start < lastEnd) {
       throw new Error(`${spec.id}: captions need unique IDs, nonempty text and ordered non-overlapping time ranges`);
+    }
+    if (caption.fontSize != null && (caption.fontSize < minFontSize || caption.fontSize > maxFontSize)) {
+      throw new Error(`${spec.id}: caption fontSize is outside declared typography bounds`);
     }
     ids.add(caption.id);
     lastEnd = caption.end;
@@ -60,10 +66,11 @@ async function captionImages(captions, width, height, dir, captionOptions, cwd) 
       const metrics = await page.evaluate(({ text, fontSize, style, bandHeight }) => {
         const element = document.querySelector('p');
         element.textContent = text;
-        let size = fontSize || Math.min(style.maxFontSize || 28, 42);
-        const min = style.enabled && style.fit === 'shrink' ? Math.max(style.minFontSize, 20) : size;
+        const lowerBound = Math.max(style.minFontSize, 20);
         const max = Math.min(style.maxFontSize || 42, 42);
-        if (size < min || size > max) throw new Error('caption fontSize is outside declared typography bounds');
+        let size = fontSize || Math.max(lowerBound, Math.min(28, max));
+        const min = style.enabled && style.fit === 'shrink' ? lowerBound : size;
+        if (size < lowerBound || size > max) throw new Error('caption fontSize is outside declared typography bounds');
         let measurement;
         do {
           element.style.fontSize = `${size--}px`;

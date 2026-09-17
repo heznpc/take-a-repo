@@ -8,6 +8,7 @@ const { withRunSession } = require('../src/run-session');
 const { renderKey, reusableProducer } = require('../src/production-cache');
 const { validateEditorial } = require('../src/production-render');
 const { runProductionCommand } = require('../src/production-cli');
+const { captureEvidence } = require('../src/evidence-runner');
 
 let cwd;
 const opts = () => ({ cwd, log: () => {} });
@@ -120,6 +121,16 @@ test('a failed render preserves the last valid capture for the next repair', asy
   expect(count()).toBe(1);
 });
 
+test('an interrupted run is planned as a new candidate while preserving reusable footage', async () => {
+  const spec = config();
+  const first = await runProduction(spec, opts());
+  fs.writeFileSync(path.join(outDir(), '.take-a-repo-run.json'), JSON.stringify({ status: 'failed' }));
+  expect(planProduction(spec, opts())).toMatchObject({ unchanged: false, producers: [{ action: 'reuse' }], deliverables: [{ action: 'render' }] });
+  const recovered = await runProduction(spec, opts());
+  expect(recovered).toMatchObject({ reusedCandidate: false, machineStatus: 'publish-ready', metrics: { executedProducers: 0 } });
+  expect(recovered.manifest).not.toBe(first.manifest);
+});
+
 test('build reuse requires source and output fingerprints; undeclared builds always execute', async () => {
   const spec = config();
   spec.build = `${JSON.stringify(process.execPath)} -e "require('fs').copyFileSync('source.txt','bundle.txt')"`;
@@ -194,6 +205,76 @@ test('render keys retain cached video across reuse labels and invalidate on edit
 test('editorial QA rejects overlap, duplicate IDs and empty copy before rendering', () => {
   for (const captions of [[caption, caption], [{ ...caption, text: ' ' }], [{ ...caption, start: 4, end: 3 }]]) {
     expect(() => validateEditorial({ ...video, captions })).toThrow();
+  }
+});
+
+test('migration can reset edits for a removed or renamed deliverable without touching history', async () => {
+  const spec = config();
+  spec.evidence.deliverables.push(video);
+  saveProject(outDir(), newProject());
+  const edited = await editProduction(spec, { baseRevision: 1, operations: [{ deliverable: 'demo', set: { captions: [caption] } }] }, opts());
+  const history = path.join(outDir(), 'project-history', edited.id, '2.json');
+  const bytes = fs.readFileSync(history);
+  spec.evidence.deliverables[1] = { ...video, id: 'renamed' };
+  expect(() => planProduction(spec, opts())).toThrow('missing video demo');
+  const reset = await editProduction(spec, { baseRevision: 2, operations: [{ deliverable: 'demo', reset: true }] }, opts());
+  expect(reset).toMatchObject({ revision: 3, edits: {} });
+  expect(fs.readFileSync(history)).toEqual(bytes);
+  expect(planProduction(spec, opts()).deliverables.map((d) => d.id)).toEqual(['proof', 'renamed']);
+});
+
+test('an interrupted project-pointer write cannot permanently block subsequent edits', async () => {
+  const spec = config(); spec.evidence.deliverables.push(video);
+  const project = saveProject(outDir(), newProject());
+  const orphan = path.join(outDir(), 'project-history', project.id, '2.json');
+  fs.writeFileSync(orphan, JSON.stringify({ ...project, revision: 2, edits: { demo: { captions: [caption] } } }));
+  const bytes = fs.readFileSync(orphan);
+  const edited = await editProduction(spec, { baseRevision: 1, operations: [{ deliverable: 'demo', set: { captions: [{ ...caption, text: 'Recovered edit' }] } }] }, opts());
+  expect(edited.revision).toBe(3);
+  expect(fs.readFileSync(orphan)).toEqual(bytes);
+  expect(readProject(outDir()).edits.demo.captions[0].text).toBe('Recovered edit');
+});
+
+test('caption validation enforces input type and typography bounds even when fitting is disabled', () => {
+  expect(() => validateEditorial({ ...video, captions: {} })).toThrow('captions must be an array');
+  for (const fit of ['none', 'shrink']) {
+    const spec = { ...video, captionOptions: { typography: { minFontSize: 32, maxFontSize: 40, fit } }, captions: [{ ...caption, fontSize: 20 }] };
+    expect(() => validateEditorial(spec)).toThrow('typography bounds');
+  }
+});
+
+test('legacy capture migrates with a fresh execution, retains its old files and still works after production', async () => {
+  const spec = config();
+  const legacy = await captureEvidence(spec, opts());
+  const old = evidenceState(outDir());
+  const bytes = fs.readFileSync(legacy.manifest);
+  // Synthetic migration fixture; this is not a product approval.
+  fs.writeFileSync(path.join(old.runDir, 'review.json'), JSON.stringify({ status: 'approved', reviewDigest: old.reviewDigest }));
+  expect(evidenceState(outDir()).publishable).toBe(true);
+  const production = await runProduction(spec, opts());
+  expect(evidenceState(outDir())).toMatchObject({ status: 'awaiting-approval', publishable: false });
+  expect(production.metrics.executedProducers).toBe(1);
+  expect(production.manifest).not.toBe(legacy.manifest);
+  expect(fs.readFileSync(legacy.manifest)).toEqual(bytes);
+  expect(fs.existsSync(path.join(old.runDir, 'raw/cli/result.txt'))).toBe(true);
+  expect((await runProduction(spec, opts())).reusedCandidate).toBe(true);
+  const projectBytes = fs.readFileSync(path.join(outDir(), PROJECT_FILE));
+  expect((await captureEvidence(spec, opts())).machineStatus).toBe('publish-ready');
+  expect(fs.readFileSync(path.join(outDir(), PROJECT_FILE))).toEqual(projectBytes);
+  expect(count()).toBe(3);
+});
+
+test('CLI production retries honor the same attempt budget as legacy capture', async () => {
+  const spec = config();
+  spec.evidence.producers[0].command = [process.execPath, '-e', 'process.exit(7)'];
+  fs.writeFileSync(path.join(cwd, 'take-a-repo.config.js'), `module.exports = ${JSON.stringify(spec)}`);
+  let output = '';
+  const io = { processCwd: () => cwd, stdout: { write: (s) => { output += s; } }, stderr: { write: () => {} } };
+  expect(await runProductionCommand(['production', 'run', '--attempt', '3', '--json'], io)).toBe(1);
+  expect(JSON.parse(output)).toMatchObject({ machineStatus: 'blocked', exitCode: 1 });
+  for (const args of [['plan', '--attempt', '3'], ['run', '--attempt', '0'], ['run', '--attempt', '1.5'], ['run', '--attempt', 'Infinity']]) {
+    output = '';
+    expect(await runProductionCommand(['production', ...args, '--json'], io)).toBe(2);
   }
 });
 

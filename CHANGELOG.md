@@ -7,6 +7,10 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- Saved production projects and `production plan/run/edit/status` with opt-in
+  local-input capture reuse, revision-bound trim/caption edits, measured caption
+  rendering, and `--attempt` retry budgets. Existing capture commands and v1
+  evidence stay compatible; each changed candidate requires its own approval.
 - `take-a-repo demo --for <channel>` delivers an uploadable file instead of a plain
   clip. The channel profile (`x`, `youtube-shorts`, `cws-youtube`) supplies
   viewport, codec, trim, and caption style, and channels are repeatable or

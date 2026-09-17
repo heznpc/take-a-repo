@@ -62,7 +62,9 @@ function editProject(config, outDir, patch) {
   const project = JSON.parse(JSON.stringify(previous));
   for (const op of patch.operations) {
     if (!op || Object.keys(op).some((k) => !['deliverable', 'set', 'reset'].includes(k))) throw new Error('invalid edit operation');
-    if (!config.evidence.deliverables.some((d) => d.kind === 'video' && d.id === op.deliverable)) throw new Error('edit requires a configured video deliverable');
+    const configured = config.evidence.deliverables.some((d) => d.kind === 'video' && d.id === op.deliverable);
+    const staleReset = op.reset === true && Object.hasOwn(project.edits, op.deliverable);
+    if (!configured && !staleReset) throw new Error('edit requires a configured video deliverable or reset of a saved edit');
     if ((op.reset === true) === (op.set != null)) throw new Error('choose set or reset for each edit');
     if (op.reset === true) delete project.edits[op.deliverable];
     else {
@@ -75,6 +77,9 @@ function editProject(config, outDir, patch) {
   for (const spec of effective.evidence.deliverables) if (spec.kind === 'video') validateEditorial(spec);
   if (digest(JSON.stringify(previous.edits)) === digest(JSON.stringify(project.edits))) return previous;
   project.revision++;
+  // A crash after writing history but before replacing the current pointer can
+  // leave an uncommitted revision. Preserve it and allocate the next free one.
+  while (fs.existsSync(path.join(outDir, 'project-history', project.id, `${project.revision}.json`))) project.revision++;
   project.updatedAt = new Date().toISOString();
   return saveProject(outDir, project);
 }

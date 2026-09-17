@@ -35,7 +35,9 @@ function prepare(config, opts = {}) {
   const intentDigest = digest(stableJson({ claims: effective.evidence.claims, deliverables: effective.evidence.deliverables, renderInputs: renderInputs?.digest }));
   const projectHash = fs.existsSync(path.join(outDir, PROJECT_FILE)) ? sha256File(path.join(outDir, PROJECT_FILE)) : null;
   const current = readJsonIfExists(path.join(outDir, 'take-a-repo-evidence.json'));
-  const sameCandidate = !!(previous && current?.id === previous.report.id && producers.every((p) => p.action === 'reuse')
+  const marker = readJsonIfExists(path.join(outDir, '.take-a-repo-run.json'));
+  const sameCandidate = !!(previous && current?.state === 'completed' && marker?.status === 'completed'
+    && current.id === previous.report.id && producers.every((p) => p.action === 'reuse')
     && previous.report.production?.intentDigest === intentDigest
     && previous.report.production?.project.sha256 === projectHash);
   return { cwd, outDir, project, effective, engine, inputs, renderInputs, previous, build, reuseBuild, producers, intentDigest, sameCandidate };

@@ -251,6 +251,8 @@ recipe, declared environment, engine/runtime identity, capture age and every
 cached artifact hash. Build reuse additionally requires `evidence.inputs` and
 `evidence.buildOutputs`; undeclared builds always rebuild and recollect.
 Use `production run --fresh` to force build, capture and rendering.
+Pass `production run --attempt <n>` on retries to enforce the existing
+`automation.maxAttempts` budget; exhausted failures return `blocked`.
 
 No-change runs return the same exact candidate and its current review status.
 New candidates contain independent copies of reused files, the original capture
@@ -280,7 +282,11 @@ require the current `baseRevision` and cannot change evidence or approvals:
 Save the patch as JSON, then run `take-a-repo production edit <repo> --patch
 <patch.json> --json` and `take-a-repo production run <repo> --json`. Pass the same
 `--config` when using a nondefault config. `set` merges trim/captions overrides;
-`{"deliverable":"demo-x","reset":true}` restores config defaults. Captions are
+`{"deliverable":"demo-x","reset":true}` restores config defaults. Saved edits
+are also removable with `reset` after their deliverable is renamed or removed from
+the config; reset all obsolete IDs in one patch before running the new config.
+History remains intact. After an interrupted project save, revision numbers may
+skip an orphaned history entry instead of overwriting it. Captions are
 ordered, non-overlapping intervals relative to the edited output, with optional
 `fontSize` from 20 to 42. Invalid edits leave the revision unchanged.
 
@@ -300,6 +306,14 @@ with the existing `review <outDir>` command. Editing the project or changing its
 fonts makes the old candidate stale; only a matching final user decision permits
 approved export. Public APIs: `planProduction(config, { cwd })`,
 `runProduction(config, { cwd, fresh })`, `editProduction(config, patch, { cwd })`.
+
+Existing evidence configs, `capture()`, legacy CLI commands and v1 evidence
+reports remain supported. Migrating an output directory requires no file rewrite:
+the first production run creates the project and collects fresh evidence because
+older runs have no reuse contract. Subsequent production runs can reuse it.
+Earlier runs and decisions remain in their original directories; approval is
+never transferred to the new candidate. Running the legacy capture command again
+executes the config as before and leaves the saved editorial project intact.
 
 ## Migration and platform boundary
 
