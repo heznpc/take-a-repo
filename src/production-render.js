@@ -8,6 +8,7 @@ const { resolveChannelProfile } = require('./channels');
 const { measureAsset } = require('./evidence-contract');
 const { renderDeliverable } = require('./evidence-render');
 const { normalizeTypographyOptions, prepareCaptionTypography } = require('./caption-typography');
+const { CAPTION_FPS, captionFrameNumbers, verifyCaptionFrames } = require('./production-caption-qa');
 
 const projectSchema = require('../schemas/production-project.schema.json');
 const validateCaption = new Ajv({ allErrors: true }).compile(projectSchema.definitions.caption);
@@ -38,6 +39,7 @@ function validateEditorial(spec) {
     ids.add(caption.id);
     lastEnd = caption.end;
   }
+  captionFrameNumbers(captions);
 }
 
 async function captionImages(captions, width, height, dir, captionOptions, cwd) {
@@ -120,9 +122,9 @@ async function renderProductionDeliverable(spec, report, runDir, cwd = process.c
   const poster = path.join(runDir, 'deliverables', `${spec.id}.png`);
   const args = ['-nostdin', '-hide_banner', '-loglevel', 'error', '-i', path.join(runDir, input.path)];
   for (const overlay of overlays) args.push('-loop', '1', '-i', overlay);
-  const filters = [`[0:v]trim=start=${start}:duration=${duration},setpts=PTS-STARTPTS,scale=${width}:${height - band}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(${width}-iw)/2:(${height - band}-ih)/2,setsar=1[v0]`];
+  const filters = [`[0:v]trim=start=${start}:duration=${duration},setpts=PTS-STARTPTS,fps=${CAPTION_FPS},scale=${width}:${height - band}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(${width}-iw)/2:(${height - band}-ih)/2,setsar=1[v0]`];
   captions.forEach((caption, i) => filters.push(`[v${i}][${i + 1}:v]overlay=0:${height - band}:enable='gte(t,${caption.start})*lt(t,${caption.end})'[v${i + 1}]`));
-  args.push('-filter_complex', filters.join(';'), '-map', `[v${captions.length}]`, '-an', '-t', String(duration), '-r', '30', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', video);
+  args.push('-filter_complex', filters.join(';'), '-map', `[v${captions.length}]`, '-an', '-t', String(duration), '-r', String(CAPTION_FPS), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', video);
   const options = { stdio: ['ignore', 'ignore', 'pipe'], timeout: ffmpegTimeoutMs(), killSignal: 'SIGKILL' };
   execFileSync(bin, args, options);
   const measured = measureAsset(runDir, { id: spec.id, path: path.relative(runDir, video), mediaType: 'video/mp4', role: 'recording', captionState: 'burned-in' });
@@ -131,6 +133,7 @@ async function renderProductionDeliverable(spec, report, runDir, cwd = process.c
     || qa.durationSeconds < profile.recommendedDurationSeconds.min || qa.durationSeconds > profile.recommendedDurationSeconds.max) {
     throw new Error(`production channel QA failed for ${spec.id}`);
   }
+  qa.captions = verifyCaptionFrames({ bin, video, overlays, captions, width, height, band });
   execFileSync(bin, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-ss', '1', '-i', video, '-frames:v', '1', poster], options);
   return [measured,
     measureAsset(runDir, { id: `${spec.id}-poster`, path: path.relative(runDir, poster), mediaType: 'image/png', role: 'screenshot' }),

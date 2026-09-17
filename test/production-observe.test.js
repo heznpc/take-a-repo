@@ -59,6 +59,24 @@ test('indexes once, reuses across editorial revisions and returns source-relativ
   expect(fs.readFileSync(path.join(runDir, 'report.json'))).toEqual(originalReport);
 });
 
+test('verified footage can be observed after the first render fails, but not after a capture failure', async () => {
+  const file = path.join(runDir, 'report.json');
+  const report = JSON.parse(fs.readFileSync(file));
+  report.machineStatus = 'needs-fix';
+  report.production = { captureVerified: true };
+  report.actions = [{ code: 'render-failed' }];
+  const save = () => {
+    writeJson(file, report);
+    writeJson(path.join(outDir, 'take-a-repo-evidence.json'), { state: 'completed', id: report.id, run: 'runs/fixture/report.json', sha256: sha256File(file) });
+  };
+  save();
+  expect((await observeProduction(config, { cwd })).metrics.analyzedSources).toBe(1);
+  expect(productionContext(config, { cwd }).frames.length).toBeGreaterThan(0);
+  report.actions.push({ code: 'producer-failed' });
+  save();
+  await expect(observeProduction(config, { cwd })).rejects.toThrow(/no intact completed evidence/);
+});
+
 test('source changes, recipe changes, tool changes and corrupted frames trigger fresh analysis', async () => {
   const first = await observeProduction(config, { cwd });
   const index = JSON.parse(fs.readFileSync(first.sources[0].index));

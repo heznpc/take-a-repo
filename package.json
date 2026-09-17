@@ -31,6 +31,7 @@
     "research": "node scripts/research-to-product-fit.mjs",
     "test": "npm run test:campaign && jest --verbose --coverage",
     "test:campaign": "node --test test/campaign-ui.node.mjs",
+    "test:production-media": "node scripts/verify-production-media.js",
     "pack:check": "node scripts/verify-pack.mjs",
     "install:browser": "playwright install chromium"
   },

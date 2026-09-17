@@ -8,7 +8,7 @@ const { digest, validateEvidenceConfig } = require('./evidence-contract');
 const { sha256File, writeJson, readJsonIfExists } = require('./handoff-files');
 const { PROJECT_FILE, readProject, newProject, saveProject, projectReference, applyProject, editProject, withProjectLock } = require('./production-project');
 const { validateEditorial, renderProductionDeliverable } = require('./production-render');
-const { stableJson, engineFingerprint, previousRun, inputState, buildState, producerKey, reusableProducer, renderKey, copyArtifacts, reuseProducer } = require('./production-cache');
+const { stableJson, engineFingerprint, reusableRun, previousRun, inputState, buildState, producerKey, reusableProducer, renderKey, copyArtifacts, reuseProducer } = require('./production-cache');
 
 function prepare(config, opts = {}) {
   validateEvidenceConfig(config);
@@ -37,7 +37,8 @@ function prepare(config, opts = {}) {
   const current = readJsonIfExists(path.join(outDir, 'take-a-repo-evidence.json'));
   const marker = readJsonIfExists(path.join(outDir, '.take-a-repo-run.json'));
   const sameCandidate = !!(previous && current?.state === 'completed' && marker?.status === 'completed'
-    && current.id === previous.report.id && producers.every((p) => p.action === 'reuse')
+    && current.id === previous.report.id && previous.report.machineStatus === 'publish-ready'
+    && producers.every((p) => p.action === 'reuse')
     && previous.report.production?.intentDigest === intentDigest
     && previous.report.production?.project.sha256 === projectHash);
   return { cwd, outDir, project, effective, engine, inputs, renderInputs, previous, build, reuseBuild, producers, intentDigest, sameCandidate };
@@ -52,7 +53,7 @@ function publicPlan(prepared, { fresh = false } = {}) {
     build: effective.build ? !fresh && prepared.reuseBuild ? 'reuse' : 'execute' : 'not-configured',
     producers: producers.map(({ key: _key, ...p }) => fresh ? { ...p, action: 'execute', reason: 'fresh run requested' } : p),
     deliverables: effective.evidence.deliverables.map((spec) => {
-      const prior = previous?.report.deliverables.find((d) => d.id === spec.id);
+      const prior = previous?.report.deliverables.find((d) => d.id === spec.id && d.status === 'rendered');
       const sourceReusable = spec.kind === 'proof' ? allReused : producers.find((p) => p.id === spec.source.split(':')[0])?.action === 'reuse';
       const sameRecipe = prior && prior.reuseKey === renderKey(spec,
         { ...previous.report, claims: resolveClaims(effective.evidence, previous.report.producers) }, prepared.engine, prepared.renderInputs?.digest);
@@ -113,7 +114,7 @@ async function runProduction(config, opts = {}) {
       },
       async render(spec, report, runDir) {
         const key = renderKey(spec, report, p.engine, p.renderInputs?.digest);
-        const old = p.previous?.report.deliverables.find((d) => d.id === spec.id && d.reuseKey === key);
+        const old = p.previous?.report.deliverables.find((d) => d.id === spec.id && d.status === 'rendered' && d.reuseKey === key);
         if (!opts.fresh && spec.kind === 'video' && old) {
           const files = old.files.map((file) => p.previous.report.files.find((asset) => asset.path === file));
           if (files.some((file) => !file)) throw new Error('cached deliverable file set is incomplete');
@@ -128,10 +129,11 @@ async function runProduction(config, opts = {}) {
         if (sha256File(path.join(outDir, PROJECT_FILE)) !== reference.sha256) throw new Error('production project changed during execution');
         if (inputState(p.effective, cwd, p.engine).digest !== p.inputs.digest) throw new Error('production inputs changed during execution');
         if (p.renderInputs && fingerprintInputs(cwd, p.renderInputs.inputs).digest !== p.renderInputs.digest) throw new Error('caption fonts changed during rendering');
+        record.captureVerified = true;
       },
     };
     const result = await captureEvidence(p.effective, { cwd, json: opts.json, log: opts.log, attempt: opts.attempt, production });
-    if (result.machineStatus === 'publish-ready') {
+    if (reusableRun(readJsonIfExists(result.manifest))) {
       writeJson(path.join(outDir, 'take-a-repo-production-cache.json'), readJsonIfExists(path.join(outDir, 'take-a-repo-evidence.json')));
     }
     return { ...result, reusedCandidate: false, plan, metrics };

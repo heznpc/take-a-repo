@@ -258,8 +258,10 @@ Pass `production run --attempt <n>` on retries to enforce the existing
 No-change runs return the same exact candidate and its current review status.
 New candidates contain independent copies of reused files, the original capture
 run/time/source, and `reused-producer-asserted` checks. They never inherit approval.
-If rendering fails, a separate cache pointer retains the last valid candidate's
-footage for repair; that pointer grants no publication authority. Source changes
+If only rendering fails, including on the first run, a separate cache pointer
+retains the verified footage for repair and observation. Execution, integrity and
+input freshness checks must still pass; the failed candidate cannot be approved.
+That pointer grants no publication authority. Source changes
 invalidate the current candidate immediately on status/review.
 
 The saved `take-a-repo-project.json` holds bounded editorial overrides; the
@@ -294,7 +296,10 @@ ordered, non-overlapping intervals relative to the edited output, with optional
 Videos require `fit: 'contain'`. Captions occupy a measured band below the whole
 product frame, never over its UI. The renderer uses Chromium plus ffmpeg and
 checks bounds, glyphs for declared fonts, H.264 dimensions, duration and full
-decoding. Localized captions require config-owned `captionOptions.typography`
+decoding. Source frames are normalized to 30 fps before caption composition.
+Every caption must cover an output frame; a decoded frame from each caption
+interval is compared with its rendered glyphs to detect missing text.
+Localized captions require config-owned `captionOptions.typography`
 with `locale` and project-local `fonts` (the same font contract as browser demos).
 Font changes invalidate the render without invalidating the footage. This first
 version supports silent videos, trim and static timed captions; no timeline UI,

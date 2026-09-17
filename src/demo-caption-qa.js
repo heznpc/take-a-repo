@@ -44,7 +44,9 @@ function overlaps(first, second) {
 }
 
 function analyzeDemoCaptionMetrics(report = {}, { viewport, protectedRegions = [], framing = null } = {}) {
-  const expectedFrames = Array.isArray(report.expectedFrames) ? report.expectedFrames : [];
+  // Empty text is an authored hide event. The controller hides the overlay
+  // without producing a visible-caption measurement for that event.
+  const expectedFrames = Array.isArray(report.expectedFrames) ? report.expectedFrames.filter((frame) => frame.text) : [];
   const samples = Array.isArray(report.samples) ? report.samples : [];
   const warnings = [];
   const warned = new Set();

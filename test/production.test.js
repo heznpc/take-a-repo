@@ -121,6 +121,42 @@ test('a failed render preserves the last valid capture for the next repair', asy
   expect(count()).toBe(1);
 });
 
+test.each([1, 3])('the first render failure retains verified sources without approving the candidate (attempt %i)', async (attempt) => {
+  const spec = config();
+  spec.evidence.deliverables.push(video); // Render failure after a successful producer.
+  const first = await runProduction(spec, { ...opts(), attempt });
+  expect(first.machineStatus).toBe(attempt === 3 ? 'blocked' : 'needs-fix');
+  expect(evidenceState(outDir()).publishable).toBe(false);
+  expect(planProduction(spec, opts())).toMatchObject({ unchanged: false, producers: [{ action: 'reuse' }], deliverables: [{ action: 'render' }, { action: 'render' }] });
+  const retry = await runProduction(spec, opts());
+  expect(retry).toMatchObject({ reusedCandidate: false, machineStatus: 'needs-fix', metrics: { executedProducers: 0, reusedProducers: 1 } });
+  spec.evidence.deliverables.pop();
+  const repair = await runProduction(spec, opts());
+  expect(repair).toMatchObject({ status: 'awaiting-approval', metrics: { executedProducers: 0, reusedProducers: 1 } });
+  expect(evidenceState(outDir()).publishable).toBe(false);
+  expect(count()).toBe(1);
+});
+
+test('a changed input during a failed render cannot seed the source cache', async () => {
+  const spec = config();
+  spec.evidence.deliverables.push(video);
+  fs.appendFileSync(path.join(cwd, 'collect.js'), "\nfs.appendFileSync('source.txt', 'changed during capture');\n");
+  const result = await runProduction(spec, opts());
+  const report = JSON.parse(fs.readFileSync(result.manifest));
+  expect(report.actions).toContainEqual(expect.objectContaining({ code: 'run-failed' }));
+  expect(report.production.captureVerified).not.toBe(true);
+  expect(fs.existsSync(path.join(outDir(), 'take-a-repo-production-cache.json'))).toBe(false);
+  expect(planProduction(spec, opts()).producers[0].action).toBe('execute');
+});
+
+test('tampered footage from an initially failed render must be collected again', async () => {
+  const spec = config();
+  spec.evidence.deliverables.push(video);
+  const first = await runProduction(spec, opts());
+  fs.appendFileSync(path.join(path.dirname(first.manifest), 'raw/cli/result.txt'), 'tampered');
+  expect(planProduction(spec, opts()).producers[0].action).toBe('execute');
+});
+
 test('an interrupted run is planned as a new candidate while preserving reusable footage', async () => {
   const spec = config();
   const first = await runProduction(spec, opts());

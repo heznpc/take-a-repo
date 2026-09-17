@@ -35,6 +35,16 @@ function engineFingerprint() {
   }));
 }
 
+function reusableRun(report) {
+  if (!report?.scope?.full) return false;
+  if (report.machineStatus === 'publish-ready') return true;
+  // Rendering cannot invalidate verified footage. All execution, integrity and
+  // freshness checks must have completed; this grants no publication authority.
+  return report.production?.captureVerified === true
+    && ['needs-fix', 'blocked'].includes(report.machineStatus)
+    && report.actions?.length > 0 && report.actions.every((action) => action.code === 'render-failed');
+}
+
 function validatedRun(outDir, pointer) {
   if (!pointer || pointer.state !== 'completed') return null;
   const file = safeAssetPath(outDir, { outPath: pointer.run });
@@ -42,7 +52,7 @@ function validatedRun(outDir, pointer) {
     if (!file || sha256File(file) !== pointer.sha256) return null;
     const report = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (report.id !== pointer.id || report.kind !== 'take-a-repo.evidence-run'
-      || report.machineStatus !== 'publish-ready' || !report.scope?.full) return null;
+      || !reusableRun(report)) return null;
     const runDir = path.dirname(file);
     for (const asset of report.files) {
       const source = safeAssetPath(runDir, { outPath: asset.path });
@@ -53,7 +63,7 @@ function validatedRun(outDir, pointer) {
 }
 
 function previousRun(outDir) {
-  // A failed edit/render must not discard the last usable footage. This cache
+  // A failed render, including the first run, can retain verified footage. This cache
   // pointer is never an approval pointer and every referenced byte is rehashed.
   const marker = readJsonIfExists(path.join(outDir, '.take-a-repo-run.json'));
   return (marker?.status === 'completed' && validatedRun(outDir, readJsonIfExists(path.join(outDir, 'take-a-repo-evidence.json'))))
@@ -129,4 +139,4 @@ function reuseProducer(previous, runDir, producer) {
   };
 }
 
-module.exports = { stableJson, engineFingerprint, previousRun, inputState, buildState, producerKey, reusableProducer, renderKey, copyArtifacts, reuseProducer };
+module.exports = { stableJson, engineFingerprint, reusableRun, previousRun, inputState, buildState, producerKey, reusableProducer, renderKey, copyArtifacts, reuseProducer };

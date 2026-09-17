@@ -19,6 +19,18 @@ function sample(overrides = {}) {
 }
 
 describe('runtime caption QA', () => {
+  test('scheduled hide events are not missing visible frames, but later visible captions still are', () => {
+    const report = {
+      expectedFrames: [{ atMs: 500, text: 'Translate now' }, { atMs: 1000, text: '' }],
+      samples: [sample()],
+    };
+    expect(analyzeDemoCaptionMetrics(report)).toEqual([]);
+    report.expectedFrames.push({ atMs: 1500, text: 'Restore anytime' });
+    expect(analyzeDemoCaptionMetrics(report)).toEqual([
+      expect.objectContaining({ code: 'caption-frame-missing', details: { frames: [{ atMs: 1500, text: 'Restore anytime' }] } }),
+    ]);
+  });
+
   test('accepts measured outline frames inside the viewport', () => {
     expect(analyzeDemoCaptionMetrics({
       expectedFrames: [{ atMs: 500, text: 'Translate now' }],
