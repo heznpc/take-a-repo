@@ -4,27 +4,132 @@
   "purpose": "이번 감사에서 새로 만든 요구사항 추적표. 과거에 이 TODO가 존재했다는 의미가 아니다.",
   "historicalTracking": {
     "dedicatedProductionTodoFoundInRepository": false,
-    "existingRecords": ["AGENTS.md", "docs/evidence.md", "docs/skillbridge-application-plan.md"],
+    "existingRecords": [
+      "AGENTS.md",
+      "docs/evidence.md",
+      "docs/skillbridge-application-plan.md"
+    ],
     "finding": "원본 재사용과 편집은 구현·문서에 반영됐지만, 기존 연출 동등성·실행 경로 일치·실제 모델 토큰 계측은 완료 조건으로 일관되게 추적되지 않았다. 대화상 설계 설명과 구현 완료를 혼동했다."
   },
   "requirements": [
-    { "id": "reuse-source", "request": "이전 영상을 재활용해서 재배포·수정 때 반복 작업을 줄인다", "priorState": "부분 구현; 렌더러 변경과 파생 파일 손상이 원본 재수집을 유발", "status": "implemented", "verification": ["test/production.test.js", "scripts/verify-production-media.js"] },
-    { "id": "preserve-caption-direction", "request": "기존 영어 애니메이션 자막보다 퇴보하지 않는다", "priorState": "production 경로에서 기존 focus 렌더링과 품질 검증 누락", "status": "implemented", "verification": ["scripts/verify-production-media.js", "test/production-caption-qa.test.js"] },
-    { "id": "entrypoint-parity", "request": "마이그레이션 후 기존 실행 경로와 제작 의도를 유지한다", "priorState": "일반 capture가 자막 및 저장된 편집을 적용하지 않음", "status": "implemented", "verification": ["scripts/verify-production-media.js"] },
-    { "id": "retry-only-failures", "request": "실패와 수정 때 필요한 부분만 다시 작업한다", "priorState": "형제 producer 실패가 정상 촬영의 재사용도 막음", "status": "implemented", "verification": ["test/production.test.js"] },
-    { "id": "model-neutral-edit-state", "request": "더 똑똑해지는 모델이 활용할 수 있는 하네스", "priorState": "수정 명세와 프레임 관찰 구현; 모델에 전달하는 맥락에서 자막 스타일 누락", "status": "implemented_for_cli_agent", "verification": ["test/production-observe.test.js", "src/production-project.js"] },
-    { "id": "token-measurement", "request": "토큰 절약을 실측한다", "priorState": "재실행 수와 프레임 JSON 크기만 계측; 실제 모델 토큰은 미계측", "status": "todo", "acceptance": "동일 모델·동일 수정 요청의 신규 제작과 재사용 제작에서 호출별 입력·출력 토큰, 비용, 결과 품질을 비교한다. modelCalls:0이나 JSON 바이트 감소를 모델 토큰 절감률로 보고하지 않는다." },
-    { "id": "latest-product-migration", "request": "실제 제품에서 마이그레이션과 결과물을 확인한다", "priorState": "보관된 SkillBridge fixture 영상으로 편집 경로 검증", "status": "partial", "acceptance": "현재 소비자 빌드·제품 시나리오별 producer·랜딩 자산 반영까지 별도로 실행 검증한다. 보관 fixture를 최신 서비스 검증으로 표시하지 않는다." }
+    {
+      "id": "reuse-source",
+      "request": "이전 영상을 재활용해서 재배포·수정 때 반복 작업을 줄인다",
+      "priorState": "부분 구현; 렌더러 변경과 파생 파일 손상이 원본 재수집을 유발",
+      "status": "implemented",
+      "verification": [
+        "test/production.test.js",
+        "scripts/verify-production-media.js"
+      ]
+    },
+    {
+      "id": "preserve-caption-direction",
+      "request": "기존 영어 애니메이션 자막보다 퇴보하지 않는다",
+      "priorState": "production 경로에서 기존 focus 렌더링과 품질 검증 누락",
+      "status": "implemented",
+      "verification": [
+        "scripts/verify-production-media.js",
+        "test/production-caption-qa.test.js"
+      ]
+    },
+    {
+      "id": "entrypoint-parity",
+      "request": "마이그레이션 후 기존 실행 경로와 제작 의도를 유지한다",
+      "priorState": "일반 capture가 자막 및 저장된 편집을 적용하지 않음",
+      "status": "implemented",
+      "verification": [
+        "scripts/verify-production-media.js"
+      ]
+    },
+    {
+      "id": "retry-only-failures",
+      "request": "실패와 수정 때 필요한 부분만 다시 작업한다",
+      "priorState": "형제 producer 실패가 정상 촬영의 재사용도 막음",
+      "status": "implemented",
+      "verification": [
+        "test/production.test.js"
+      ]
+    },
+    {
+      "id": "model-neutral-edit-state",
+      "request": "더 똑똑해지는 모델이 활용할 수 있는 하네스",
+      "priorState": "수정 명세와 프레임 관찰 구현; 모델에 전달하는 맥락에서 자막 스타일 누락",
+      "status": "implemented_for_cli_agent",
+      "verification": [
+        "test/production-observe.test.js",
+        "src/production-project.js"
+      ]
+    },
+    {
+      "id": "token-measurement",
+      "request": "토큰 절약을 실측한다",
+      "priorState": "재실행 수와 프레임 JSON 크기만 계측; 실제 모델 토큰은 미계측",
+      "status": "todo",
+      "acceptance": "동일 모델·동일 수정 요청의 신규 제작과 재사용 제작에서 호출별 입력·출력 토큰, 비용, 결과 품질을 비교한다. modelCalls:0이나 JSON 바이트 감소를 모델 토큰 절감률로 보고하지 않는다."
+    },
+    {
+      "id": "latest-product-migration",
+      "request": "실제 제품에서 마이그레이션과 결과물을 확인한다",
+      "priorState": "보관된 SkillBridge fixture 영상으로 편집 경로 검증",
+      "status": "partial",
+      "acceptance": "현재 소비자 빌드·제품 시나리오별 producer·랜딩 자산 반영까지 별도로 실행 검증한다. 보관 fixture를 최신 서비스 검증으로 표시하지 않는다."
+    }
   ],
   "architectureDiscussedButNotDelivered": [
-    { "id": "model-gateway", "status": "todo", "acceptance": "모델 선택·비용·실패·응답 형식 처리를 실제 호출에 연결" },
-    { "id": "creative-specialists", "status": "todo", "acceptance": "여러 연출안을 실제 생성·비평·비교해 최종 작품에 반영" },
-    { "id": "production-memory", "status": "partial", "acceptance": "보존 프레임을 넘어 과거 작품·판단·수정 이유를 검색하고 재사용" },
-    { "id": "visual-edit-specification", "status": "todo", "acceptance": "영상의 대상과 시간 구간을 선택해 같은 revision-bound 수정 명세를 생성" },
-    { "id": "autonomous-triggers", "status": "todo", "acceptance": "사용자 요청·릴리즈 이벤트를 지속 작업 큐와 중복 방지에 연결" },
-    { "id": "external-tools", "status": "todo", "acceptance": "MCP·음성·생성 영상 도구의 실제 호출, 취소, 실패, 자산 출처를 관리" },
-    { "id": "delegated-publishing", "status": "todo", "acceptance": "기존 건별 승인과 별도로 범위·기한이 있는 위임 및 중복 게시 방지·결과 기록을 구현" },
-    { "id": "native-platform-adapters", "status": "partial", "acceptance": "command producer 계약을 플랫폼별 앱 조작·촬영 어댑터의 실제 실행 검증으로 확장" },
-    { "id": "claim-time-region-binding", "status": "todo", "acceptance": "주장의 근거 시간·영역과 fixture 고지를 명시하고 편집으로 필수 근거가 빠지면 차단" }
+    {
+      "id": "model-gateway",
+      "status": "todo",
+      "acceptance": "모델 선택·비용·실패·응답 형식 처리를 실제 호출에 연결"
+    },
+    {
+      "id": "creative-specialists",
+      "status": "todo",
+      "acceptance": "여러 연출안을 실제 생성·비평·비교해 최종 작품에 반영"
+    },
+    {
+      "id": "production-memory",
+      "status": "partial",
+      "acceptance": "보존 프레임을 넘어 과거 작품·판단·수정 이유를 검색하고 재사용"
+    },
+    {
+      "id": "visual-edit-specification",
+      "status": "todo",
+      "acceptance": "영상의 대상과 시간 구간을 선택해 같은 revision-bound 수정 명세를 생성"
+    },
+    {
+      "id": "autonomous-triggers",
+      "status": "todo",
+      "acceptance": "사용자 요청·릴리즈 이벤트를 지속 작업 큐와 중복 방지에 연결"
+    },
+    {
+      "id": "external-tools",
+      "status": "todo",
+      "acceptance": "MCP·음성·생성 영상 도구의 실제 호출, 취소, 실패, 자산 출처를 관리"
+    },
+    {
+      "id": "delegated-publishing",
+      "status": "todo",
+      "acceptance": "기존 건별 승인과 별도로 범위·기한이 있는 위임 및 중복 게시 방지·결과 기록을 구현"
+    },
+    {
+      "id": "native-platform-adapters",
+      "status": "partial",
+      "acceptance": "command producer 계약을 플랫폼별 앱 조작·촬영 어댑터의 실제 실행 검증으로 확장"
+    },
+    {
+      "id": "claim-time-region-binding",
+      "status": "todo",
+      "acceptance": "주장의 근거 시간·영역과 fixture 고지를 명시하고 편집으로 필수 근거가 빠지면 차단"
+    },
+    {
+      "id": "event-bound-editorial-reuse",
+      "status": "todo",
+      "acceptance": "초·좌표만 저장하는 편집을 제품의 의미 있는 실행 이벤트와 화면 대상에 연결한다. 재촬영 후에도 기존 연출을 새 이벤트 시점에 재적용하고, 대상이 없거나 모호할 때만 재판단한다."
+    },
+    {
+      "id": "model-comparison-benchmark",
+      "status": "todo",
+      "acceptance": "동일 제품·수정 요청에 대해 모델 교체 전후의 결과 품질·모델 토큰·비용·사용자 개입 시간을 비교한다."
+    }
   ]
 }
