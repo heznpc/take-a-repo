@@ -376,6 +376,19 @@ describe('lintDemoStoryboard', () => {
 });
 
 describe('createDemoController', () => {
+  test('tracks burned-in captions even after hiding or a failed browser measurement', async () => {
+    const page = new FakePage();
+    const demo = createDemoController({ page });
+    expect(demo.captionMetrics().captionState).toBe('none');
+    await demo.caption('Already in the source pixels');
+    await demo.hide();
+    expect(demo.captionMetrics().captionState).toBe('burned-in');
+    demo.stop();
+    const scheduled = createDemoController({ page, captions: [{ at: 60, text: 'Scheduled caption' }] });
+    expect(scheduled.captionMetrics().captionState).toBe('burned-in');
+    scheduled.stop();
+  });
+
   test('caption renders through the DOM overlay helper', async () => {
     const page = new FakePage();
     const demo = createDemoController({ page, captionOptions: { position: 'bottom' } });

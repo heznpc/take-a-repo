@@ -51,6 +51,8 @@ test('indexes once, reuses across editorial revisions and returns source-relativ
   expect(context.coverage).toMatchObject({ availableFrames: 4, returnedFrames: 3, subsampled: true, completeEventCoverage: false });
   expect(context.editContext).toMatchObject({ baseRevision: 2, deliverables: [{ id: 'demo', trim: { start: 10, duration: 8 }, constraints: { durationSeconds: { min: 20, max: 40 }, trimMustFitSource: true } }] });
   expect(context.metrics).toMatchObject({ fullFrames: 30, returnedFrames: 3, modelCalls: 0, actualModelTokens: null });
+  expect(context.source.captionState).toBe('unknown');
+  expect(context.editContext.deliverables[0].constraints.canAddCaptions).toBe(false);
   expect(context.metrics.frameJsonReductionPercent).toBeGreaterThan(85);
   expect(context.metrics.returnedFrameJsonBytes).toBe(Buffer.byteLength(JSON.stringify(context.frames)));
   expect(extractObservationFrames).toHaveBeenCalledTimes(1);

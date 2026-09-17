@@ -104,7 +104,7 @@ function renderKey(spec, report, engine, renderInputs = null) {
     ? report.producers.filter((p) => p.id === spec.source.split(':')[0]) : report.producers;
   return digest(stableJson({ engine, renderInputs, spec, producers: producers.map((p) => ({
     id: p.id, origin: p.origin || { runId: report.id }, checks: p.checks.map(({ verification: _verification, ...check }) => check),
-    assets: p.assets.map((a) => ({ id: a.id, sha256: a.sha256 })),
+    assets: p.assets.map((a) => ({ id: a.id, sha256: a.sha256, captionState: a.captionState || 'unknown' })),
   })), claims: report.claims.filter((c) => spec.claims.includes(c.id)) }));
 }
 

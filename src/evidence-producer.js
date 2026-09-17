@@ -64,6 +64,7 @@ async function browserEvidence(producer, cwd, outDir, log) {
     id: `asset-${index}`, path: asset.outPath,
     mediaType: asset.outPath.endsWith('.webm') ? 'video/webm' : mediaTypes[asset.type],
     role: asset.type === 'video' ? 'recording' : asset.type === 'image' ? 'screenshot' : 'artifact',
+    ...(asset.type === 'video' ? { captionState: asset.source?.captionState || 'unknown' } : {}),
     description: asset.name || asset.outPath,
   }));
   const checks = assets.length ? [{
